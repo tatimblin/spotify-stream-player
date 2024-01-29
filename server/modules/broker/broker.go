@@ -91,6 +91,7 @@ func (broker *Broker) listen() {
 
 			// A client has dettached and we want to
 			// stop sending them messages.
+			close(s)
 			delete(broker.clients, s)
 			log.Printf("Removed client. %d registered clients", len(broker.clients))
 		case event := <-broker.Notifier:
