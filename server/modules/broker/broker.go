@@ -11,6 +11,9 @@ type Broker struct {
 	// Events are pushed to this channel by the main events-gathering routine
 	Notifier chan []byte
 
+	Play  chan struct{}
+	Pause chan struct{}
+
 	// New client connections
 	newClients chan chan []byte
 
@@ -31,6 +34,8 @@ func NewServer() (broker *Broker) {
 	// Instantiate a broker
 	broker = &Broker{
 		Notifier:       make(chan []byte, 1),
+		Play:           make(chan struct{}),
+		Pause:          make(chan struct{}),
 		newClients:     make(chan chan []byte),
 		closingClients: make(chan chan []byte),
 		clients:        make(map[chan []byte]bool),
@@ -87,13 +92,18 @@ func (broker *Broker) listen() {
 			// Register their message channel
 			broker.clients[s] = true
 			log.Printf("Client added. %d registered clients", len(broker.clients))
+			if len(broker.clients) == 1 {
+				broker.Play <- struct{}{}
+			}
 		case s := <-broker.closingClients:
 
 			// A client has dettached and we want to
 			// stop sending them messages.
-			close(s)
 			delete(broker.clients, s)
 			log.Printf("Removed client. %d registered clients", len(broker.clients))
+			if len(broker.clients) == 0 {
+				broker.Pause <- struct{}{}
+			}
 		case event := <-broker.Notifier:
 
 			// We got a new event from the outside!

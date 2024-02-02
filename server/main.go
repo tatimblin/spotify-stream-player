@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -20,12 +21,31 @@ func main() {
 	}
 
 	broker := broker.NewServer()
-
 	player := player.NewPlayer()
+
+	paused := true
+
+	go func() {
+		select {
+		case <-broker.Play:
+			fmt.Println("play")
+			paused = false
+		case <-broker.Pause:
+			fmt.Println("pause")
+			paused = true
+		}
+	}()
 
 	go func() {
 		for {
+			fmt.Println("enter")
+
 			time.Sleep(time.Second * 2)
+
+			if paused {
+				fmt.Println("abort")
+				continue
+			}
 
 			someUser, err := player.SomeQuery()
 			if err != nil {
