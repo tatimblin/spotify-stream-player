@@ -23,26 +23,11 @@ func main() {
 	broker := broker.NewServer()
 	player := player.NewPlayer()
 
-	paused := true
-
-	go func() {
-		select {
-		case <-broker.Play:
-			fmt.Println("play")
-			paused = false
-		case <-broker.Pause:
-			fmt.Println("pause")
-			paused = true
-		}
-	}()
-
 	go func() {
 		for {
-			fmt.Println("enter")
-
 			time.Sleep(time.Second * 2)
 
-			if paused {
+			if !broker.Playing {
 				fmt.Println("abort")
 				continue
 			}

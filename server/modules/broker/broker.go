@@ -11,8 +11,9 @@ type Broker struct {
 	// Events are pushed to this channel by the main events-gathering routine
 	Notifier chan []byte
 
-	Play  chan struct{}
-	Pause chan struct{}
+	Playing bool
+	play    chan struct{}
+	pause   chan struct{}
 
 	// New client connections
 	newClients chan chan []byte
@@ -34,8 +35,9 @@ func NewServer() (broker *Broker) {
 	// Instantiate a broker
 	broker = &Broker{
 		Notifier:       make(chan []byte, 1),
-		Play:           make(chan struct{}),
-		Pause:          make(chan struct{}),
+		Playing:        false,
+		play:           make(chan struct{}),
+		pause:          make(chan struct{}),
 		newClients:     make(chan chan []byte),
 		closingClients: make(chan chan []byte),
 		clients:        make(map[chan []byte]bool),
@@ -66,14 +68,26 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	messageChan := broker.AddClient()
 
 	defer func() {
+		fmt.Println("try and remove")
 		broker.RemoveClient(messageChan)
 	}()
 
 	notify := req.Context().Done()
 
 	go func() {
-		<-notify
-		broker.RemoveClient(messageChan)
+		for {
+			select {
+			case <-notify:
+				fmt.Println("try and remove 2")
+				broker.RemoveClient(messageChan)
+			case <-broker.play:
+				fmt.Println("play")
+				broker.Playing = true
+			case <-broker.pause:
+				fmt.Println("pause")
+				broker.Playing = false
+			}
+		}
 	}()
 
 	for {
@@ -86,31 +100,22 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func (broker *Broker) listen() {
 	for {
 		select {
-		case s := <-broker.newClients:
-
-			// A new client has connected.
-			// Register their message channel
-			broker.clients[s] = true
-			log.Printf("Client added. %d registered clients", len(broker.clients))
-			if len(broker.clients) == 1 {
-				broker.Play <- struct{}{}
-			}
-		case s := <-broker.closingClients:
-
-			// A client has dettached and we want to
-			// stop sending them messages.
-			delete(broker.clients, s)
-			log.Printf("Removed client. %d registered clients", len(broker.clients))
-			if len(broker.clients) == 0 {
-				broker.Pause <- struct{}{}
-			}
 		case event := <-broker.Notifier:
-
-			// We got a new event from the outside!
-			// Send event to all connected clients
 			for clientMessageChan := range broker.clients {
 				clientMessageChan <- event
 			}
+		case s := <-broker.newClients:
+			broker.clients[s] = true
+			log.Printf("Client added. %d registered clients", len(broker.clients))
+			if len(broker.clients) == 1 {
+				broker.play <- struct{}{}
+			}
+		case s := <-broker.closingClients:
+			if len(broker.clients) == 0 {
+				broker.pause <- struct{}{}
+			}
+			delete(broker.clients, s)
+			log.Printf("Removed client. %d registered clients", len(broker.clients))
 		}
 	}
 }
