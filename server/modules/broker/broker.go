@@ -68,7 +68,6 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	messageChan := broker.AddClient()
 
 	defer func() {
-		fmt.Println("try and remove")
 		broker.RemoveClient(messageChan)
 	}()
 
@@ -78,13 +77,10 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		for {
 			select {
 			case <-notify:
-				fmt.Println("try and remove 2")
 				broker.RemoveClient(messageChan)
 			case <-broker.play:
-				fmt.Println("play")
 				broker.Playing = true
 			case <-broker.pause:
-				fmt.Println("pause")
 				broker.Playing = false
 			}
 		}

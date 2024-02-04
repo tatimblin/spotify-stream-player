@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -28,7 +27,6 @@ func main() {
 			time.Sleep(time.Second * 2)
 
 			if !broker.Playing {
-				fmt.Println("abort")
 				continue
 			}
 
