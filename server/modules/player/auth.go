@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -20,23 +21,36 @@ var (
 func GetInstance(ctx context.Context) *spotify.Client {
 	if spotifyInstance == nil {
 		spotifyOnce.Do(func() {
-			token, err := createToken(ctx)
+			token, err := createAuthenticatedToken(ctx)
 			if err != nil {
 				log.Fatalf("could not get token: %v", err)
 			}
-			httpclient := spotifyauth.New().Client(ctx, token)
-			spotifyInstance = spotify.New(httpclient)
+
+			spotifyInstance = spotify.New(spotifyauth.New().Client(ctx, token))
 		})
 	}
 
 	return spotifyInstance
 }
 
-func createToken(ctx context.Context) (*oauth2.Token, error) {
+// Creates a new auth token for a specific user by using a pre determined
+// refresh_token `SPOTIFY_REFRESH`, and forcing a refresh.
+func createAuthenticatedToken(ctx context.Context) (*oauth2.Token, error) {
+	auth := spotifyauth.New()
+
 	config := &clientcredentials.Config{
 		ClientID:     os.Getenv("SPOTIFY_ID"),
 		ClientSecret: os.Getenv("SPOTIFY_SECRET"),
 		TokenURL:     spotifyauth.TokenURL,
 	}
-	return config.Token(ctx)
+
+	token, err := config.Token(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	token.RefreshToken = os.Getenv("SPOTIFY_REFRESH")
+	token.Expiry = time.Now()
+
+	return auth.RefreshToken(ctx, token)
 }

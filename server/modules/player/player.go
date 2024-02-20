@@ -2,6 +2,7 @@ package player
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -22,8 +23,16 @@ func NewPlayer() *Player {
 
 type PlayerInterface interface {
 	SomeQuery() (*spotify.User, error)
+	NowPlaying() (*spotify.CurrentlyPlaying, error)
 }
 
 func (player *Player) SomeQuery() (*spotify.User, error) {
-	return player.client.GetUsersPublicProfile(player.ctx, spotify.ID("2rdu132h3xewzz4sjegc4j4pq"))
+	return player.client.GetUsersPublicProfile(player.ctx, spotify.ID("tristimb"))
+}
+
+func (player *Player) NowPlaying() (*spotify.CurrentlyPlaying, error) {
+	nowPlaying, err := player.client.PlayerCurrentlyPlaying(player.ctx)
+	fmt.Println("nowPlaying", nowPlaying)
+	fmt.Println(err)
+	return nowPlaying, err
 }

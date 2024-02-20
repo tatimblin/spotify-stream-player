@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -30,13 +31,13 @@ func main() {
 				continue
 			}
 
-			someUser, err := player.SomeQuery()
+			nowPlaying, err := player.NowPlaying()
 			if err != nil {
-				log.Fatalf("could not get user")
+				fmt.Println(err)
 			}
 
-			log.Println("Receiving Event")
-			broker.Notifier <- []byte(someUser.DisplayName)
+			log.Println("Receiving Event", nowPlaying)
+			// broker.Notifier <- []byte(nowPlaying.Item.Name)
 		}
 	}()
 
