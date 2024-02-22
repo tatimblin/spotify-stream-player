@@ -2,7 +2,7 @@ package player
 
 import (
 	"context"
-	"fmt"
+	"strings"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -22,17 +22,60 @@ func NewPlayer() *Player {
 }
 
 type PlayerInterface interface {
-	SomeQuery() (*spotify.User, error)
 	NowPlaying() (*spotify.CurrentlyPlaying, error)
 }
 
-func (player *Player) SomeQuery() (*spotify.User, error) {
-	return player.client.GetUsersPublicProfile(player.ctx, spotify.ID("tristimb"))
+type link struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
 }
 
-func (player *Player) NowPlaying() (*spotify.CurrentlyPlaying, error) {
+type PlayerActivity struct {
+	Track    link   `json:"track"`
+	Album    link   `json:"album"`
+	Artist   link   `json:"artist"`
+	Cover    string `json:"cover"`
+	Progress int    `json:"progress"`
+	Duration int    `json:"duration"`
+	Preview  string `json:"preview"`
+}
+
+func (player *Player) NowPlaying() (PlayerActivity, error) {
+	playerActivity := PlayerActivity{}
+
 	nowPlaying, err := player.client.PlayerCurrentlyPlaying(player.ctx)
-	fmt.Println("nowPlaying", nowPlaying)
-	fmt.Println(err)
-	return nowPlaying, err
+	if err != nil {
+		return playerActivity, err
+	}
+
+	parsePlayerActivity(nowPlaying, &playerActivity)
+
+	return playerActivity, nil
+}
+
+func parsePlayerActivity(currentlyPlaying *spotify.CurrentlyPlaying, playerActivity *PlayerActivity) {
+	playerActivity.Track = link{
+		Label: currentlyPlaying.Item.Name,
+	}
+
+	playerActivity.Album = link{
+		Label: currentlyPlaying.Item.Album.Name,
+	}
+
+	var artists []string
+	for _, artist := range currentlyPlaying.Item.Artists {
+		artists = append(artists, artist.Name)
+	}
+	playerActivity.Artist = link{
+		Label: strings.Join(artists, ", "),
+	}
+
+	lastImageIndex := len(currentlyPlaying.Item.Album.Images) - 1
+	playerActivity.Cover = currentlyPlaying.Item.Album.Images[lastImageIndex].URL
+
+	playerActivity.Progress = currentlyPlaying.Progress
+
+	playerActivity.Duration = currentlyPlaying.Item.Duration
+
+	playerActivity.Preview = currentlyPlaying.Item.PreviewURL
 }

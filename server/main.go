@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -36,8 +37,12 @@ func main() {
 				fmt.Println(err)
 			}
 
-			log.Println("Receiving Event", nowPlaying)
-			// broker.Notifier <- []byte(nowPlaying.Item.Name)
+			b, err := json.Marshal(nowPlaying)
+			if err != nil {
+				fmt.Printf("Error: %s", err)
+				return
+			}
+			broker.Notifier <- []byte(b)
 		}
 	}()
 
