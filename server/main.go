@@ -35,12 +35,13 @@ func main() {
 			nowPlaying, err := player.NowPlaying()
 			if err != nil {
 				fmt.Println(err)
+				continue
 			}
 
 			b, err := json.Marshal(nowPlaying)
 			if err != nil {
 				fmt.Printf("Error: %s", err)
-				return
+				continue
 			}
 			broker.Notifier <- []byte(b)
 		}
@@ -52,5 +53,6 @@ func main() {
 		log.Printf("defaulting on port %s", port)
 	}
 
+	// TODO: upgrade to http2 to support disconnect signal in cloud run
 	log.Fatal("HTTP server error: ", http.ListenAndServe(":"+port, broker))
 }

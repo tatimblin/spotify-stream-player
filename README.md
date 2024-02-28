@@ -2,7 +2,7 @@
 
 ## Deploy Service
 
-1. `gcloud run deploy spot-fy-stream-player --source`
+1. `gcloud run deploy spotify-stream-player --source ./server`
 2. Region: [34] us-east4
 
 ## Get Refresh Token

@@ -51,10 +51,7 @@ func NewServer() (broker *Broker) {
 
 func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
-	// Make sure that the writer supports flushing.
-	//
 	flusher, ok := rw.(http.Flusher)
-
 	if !ok {
 		http.Error(rw, "Streaming unsupported!", http.StatusInternalServerError)
 		return
@@ -71,13 +68,13 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		broker.RemoveClient(messageChan)
 	}()
 
-	notify := req.Context().Done()
-
 	go func() {
+	outer:
 		for {
 			select {
-			case <-notify:
+			case <-req.Context().Done():
 				broker.RemoveClient(messageChan)
+				break outer
 			case <-broker.play:
 				broker.Playing = true
 			case <-broker.pause:
@@ -103,7 +100,7 @@ func (broker *Broker) listen() {
 		case s := <-broker.newClients:
 			broker.clients[s] = true
 			log.Printf("Client added. %d registered clients", len(broker.clients))
-			if len(broker.clients) == 1 {
+			if len(broker.clients) > 0 {
 				broker.play <- struct{}{}
 			}
 		case s := <-broker.closingClients:
@@ -124,6 +121,5 @@ func (broker *Broker) AddClient() chan []byte {
 }
 
 func (broker *Broker) RemoveClient(messageChan chan []byte) {
-	close(messageChan)
 	broker.closingClients <- messageChan
 }
