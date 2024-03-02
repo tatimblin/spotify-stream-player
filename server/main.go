@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 func main() {
@@ -53,6 +55,12 @@ func main() {
 		log.Printf("defaulting on port %s", port)
 	}
 
-	// TODO: upgrade to http2 to support disconnect signal in cloud run
-	log.Fatal("HTTP server error: ", http.ListenAndServe(":"+port, broker))
+	h2s := &http2.Server{}
+	handler := http.HandlerFunc(broker.ServeHTTP)
+
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: h2c.NewHandler(handler, h2s),
+	}
+	log.Fatal("HTTP server error: ", server.ListenAndServe())
 }
