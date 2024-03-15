@@ -12,8 +12,6 @@ type Broker struct {
 	Notifier chan []byte
 
 	Playing bool
-	play    chan struct{}
-	pause   chan struct{}
 
 	// New client connections
 	newClients chan chan []byte
@@ -36,8 +34,6 @@ func NewServer() (broker *Broker) {
 	broker = &Broker{
 		Notifier:       make(chan []byte, 1),
 		Playing:        false,
-		play:           make(chan struct{}),
-		pause:          make(chan struct{}),
 		newClients:     make(chan chan []byte),
 		closingClients: make(chan chan []byte),
 		clients:        make(map[chan []byte]bool),
@@ -71,15 +67,9 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	go func() {
 	outer:
 		for {
-			select {
-			case <-req.Context().Done():
-				broker.RemoveClient(messageChan)
-				break outer
-			case <-broker.play:
-				broker.Playing = true
-			case <-broker.pause:
-				broker.Playing = false
-			}
+			<-req.Context().Done()
+			broker.RemoveClient(messageChan)
+			break outer
 		}
 	}()
 
@@ -101,11 +91,11 @@ func (broker *Broker) listen() {
 			broker.clients[s] = true
 			log.Printf("Client added. %d registered clients", len(broker.clients))
 			if len(broker.clients) > 0 {
-				broker.play <- struct{}{}
+				broker.Playing = true
 			}
 		case s := <-broker.closingClients:
-			if len(broker.clients) == 0 {
-				broker.pause <- struct{}{}
+			if len(broker.clients) == 1 {
+				broker.Playing = false
 			}
 			delete(broker.clients, s)
 			log.Printf("Removed client. %d registered clients", len(broker.clients))
