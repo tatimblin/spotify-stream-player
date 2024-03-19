@@ -1,7 +1,7 @@
 class SpotifyPlayer extends HTMLElement {
   connectedCallback() {
     const now = new Date();
-    this.textContent = now.toLocaleDateString();
+    this.textContent = now.toLocaleDateString() + "hey there";
   }
 }
 

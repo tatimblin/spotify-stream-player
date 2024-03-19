@@ -3,8 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "serve": "bunx serve build",
-    "build": "bun run ./index.ts"
+    "watch": "bun build ./src/index.ts --outfile=./dist/index.js --watch"
   },
   "devDependencies": {
     "@types/bun": "latest"
