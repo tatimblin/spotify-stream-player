@@ -1,5 +1,8 @@
+import styleLoader from 'bun-style-loader';
+
 await Bun.build({
   entrypoints: ["./src/index.ts"],
-  outdir: './dist',
+  outdir: "./dist",
+  plugins: [styleLoader()],
   minify: true,
 });

@@ -1,3 +1,5 @@
+import styles from "./main.scss";
+
 interface EventResponse extends Event {
   data: Response,
 }
@@ -10,7 +12,7 @@ declare global {
 
 interface Link {
   label: string,
-  url: string,
+  url?: string,
 }
 
 interface Response {
@@ -20,7 +22,7 @@ interface Response {
   cover: string,
   progress: number,
   duration: number,
-  preview: string,
+  preview?: string,
 }
 
 class SpotifyPlayer extends HTMLElement {
@@ -31,6 +33,14 @@ class SpotifyPlayer extends HTMLElement {
     super();
 
     this.#source = "http://localhost:8080/";
+    this.#data = {
+      track: { label: "test" },
+      album: { label: "test" },
+      artist: { label: "test" },
+      cover: "",
+      progress: 0,
+      duration: 0,
+    };
   }
 
   connectedCallback() {
@@ -49,29 +59,16 @@ class SpotifyPlayer extends HTMLElement {
 
   render() {
     this.innerHTML = `
-        <style>
-          .details {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-          }
-          .progress {
-            padding: 16px 32px;
-          }
-          .progress-bar {
-            width: 100%;
-          }
-        </style>
-        <div class="details">
+        <div class="${styles.details}">
           <img src="${this.#data.cover}"/>
           <div>
             <span>${this.#data.track.label}</span><br/>
             <span>${this.#data.artist.label} – ${this.#data.album.label}</span>
           </div>
         </div>
-        <div class="progress">
+        <div class="${styles.progress}">
           <progress
-            class="progress-bar"
+            class="${styles["progress-bar"]}"
             value="${this.#data.progress}"
             max="${this.#data.duration}"
           >
