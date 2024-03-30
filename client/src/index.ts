@@ -1,4 +1,4 @@
-import styles from "./main.scss";
+import styles from './main.module.css'
 
 interface EventResponse extends Event {
   data: Response,
@@ -60,7 +60,7 @@ class SpotifyPlayer extends HTMLElement {
   render() {
     this.innerHTML = `
         <div class="${styles.details}">
-          <img src="${this.#data.cover}"/>
+          <img src="${this.#data.cover}"/>hi
           <div>
             <span>${this.#data.track.label}</span><br/>
             <span>${this.#data.artist.label} – ${this.#data.album.label}</span>
