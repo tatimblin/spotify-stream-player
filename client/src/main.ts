@@ -1,4 +1,6 @@
-import './style.css'
+import Timestamp from "./timestamp.ts";
+
+import classes from './style.module.css'
 
 interface EventResponse extends Event {
   data: Response,
@@ -46,10 +48,9 @@ class SpotifyPlayer extends HTMLElement {
   }
 
   connectedCallback() {
-    const template = document.getElementById('my-template');
-    console.log(template)
-    const evtSource = new EventSource(this.#source);
+    // this.attachShadow({ mode: "open" });
 
+    const evtSource = new EventSource(this.#source);
     evtSource.onmessage = (event: Event) => {
       const messageEvent = (event as MessageEvent);
       this.#data = JSON.parse(messageEvent.data);
@@ -61,21 +62,32 @@ class SpotifyPlayer extends HTMLElement {
 
   render() {
     this.innerHTML = `
-        <div class="details">
-          <img src="${this.#data.cover}"/>
+        <div class="${classes.details}">
+          <img class="${classes.details_album}" src="${this.#data.cover}"/>
           <div>
-            <span>${this.#data.track.label}</span><br/>
-            <span>${this.#data.artist.label} – ${this.#data.album.label}</span>
+            <span class="${classes.details_head}">${this.#data.track.label}</span>
+            <br/>
+            <span class="${classes.details_rib}">${this.#data.artist.label} – ${this.#data.album.label}</span>
           </div>
         </div>
-        <div class="progress">
+        <div class="${classes.progress}">
           <progress
-            class="progress-gh"
+            class="${classes.progress_bar}"
             value="${this.#data.progress}"
             max="${this.#data.duration}"
           >
               ${this.getProgress()}%
           </progress>
+          <div class="${classes.progress_duration}">
+            ${Timestamp({
+              className: classes.progress_duration_timestamp,
+              milliseconds: this.#data.progress,
+            })}
+            ${Timestamp({
+              className: classes.progress_duration_timestamp,
+              milliseconds: this.#data.duration,
+            })}
+          </div>
         </div>
       `;
   }
