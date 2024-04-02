@@ -1,4 +1,4 @@
-import styles from './main.module.css'
+import './style.css'
 
 interface EventResponse extends Event {
   data: Response,
@@ -41,6 +41,8 @@ class SpotifyPlayer extends HTMLElement {
       progress: 0,
       duration: 0,
     };
+
+    // setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
   }
 
   connectedCallback() {
@@ -59,16 +61,16 @@ class SpotifyPlayer extends HTMLElement {
 
   render() {
     this.innerHTML = `
-        <div class="${styles.details}">
-          <img src="${this.#data.cover}"/>hi
+        <div class="details">
+          <img src="${this.#data.cover}"/>
           <div>
             <span>${this.#data.track.label}</span><br/>
             <span>${this.#data.artist.label} – ${this.#data.album.label}</span>
           </div>
         </div>
-        <div class="${styles.progress}">
+        <div class="progress">
           <progress
-            class="${styles["progress-bar"]}"
+            class="progress-gh"
             value="${this.#data.progress}"
             max="${this.#data.duration}"
           >
