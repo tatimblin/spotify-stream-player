@@ -34,15 +34,15 @@ func main() {
 				continue
 			}
 
-			nowPlaying, err := player.NowPlaying()
+			state, err := player.NowPlaying()
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("Error: %s\n", err)
 				continue
 			}
 
-			b, err := json.Marshal(nowPlaying)
+			b, err := json.Marshal(state)
 			if err != nil {
-				fmt.Printf("Error: %s", err)
+				fmt.Printf("Error: %s\n", err)
 				continue
 			}
 			broker.Notifier <- []byte(b)

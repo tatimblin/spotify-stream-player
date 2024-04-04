@@ -2,7 +2,7 @@ package player
 
 import (
 	"context"
-	"strings"
+	"fmt"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -25,57 +25,24 @@ type PlayerInterface interface {
 	NowPlaying() (*spotify.CurrentlyPlaying, error)
 }
 
-type link struct {
-	Label string `json:"label"`
-	URL   string `json:"url"`
-}
-
-type PlayerActivity struct {
-	Track    link   `json:"track"`
-	Album    link   `json:"album"`
-	Artist   link   `json:"artist"`
-	Cover    string `json:"cover"`
-	Progress int    `json:"progress"`
-	Duration int    `json:"duration"`
-	Preview  string `json:"preview"`
-}
-
-func (player *Player) NowPlaying() (PlayerActivity, error) {
-	playerActivity := PlayerActivity{}
+func (player *Player) NowPlaying() (PlayerState, error) {
+	playerState := PlayerState{}
 
 	nowPlaying, err := player.client.PlayerCurrentlyPlaying(player.ctx)
 	if err != nil {
-		return playerActivity, err
+		return playerState, err
 	}
 
-	parsePlayerActivity(nowPlaying, &playerActivity)
-
-	return playerActivity, nil
-}
-
-func parsePlayerActivity(currentlyPlaying *spotify.CurrentlyPlaying, playerActivity *PlayerActivity) {
-	playerActivity.Track = link{
-		Label: currentlyPlaying.Item.Name,
+	if nowPlaying.Item == nil {
+		return playerState, fmt.Errorf("not a track")
 	}
 
-	playerActivity.Album = link{
-		Label: currentlyPlaying.Item.Album.Name,
-	}
+	playerState.SetTrack(nowPlaying.Item)
+	playerState.SetAlbum(nowPlaying.Item)
+	playerState.SetArtist(nowPlaying.Item)
+	playerState.SetPreview(nowPlaying.Item)
+	playerState.SetDuration(nowPlaying.Item)
+	playerState.SetProgress(nowPlaying)
 
-	var artists []string
-	for _, artist := range currentlyPlaying.Item.Artists {
-		artists = append(artists, artist.Name)
-	}
-	playerActivity.Artist = link{
-		Label: strings.Join(artists, ", "),
-	}
-
-	lastImageIndex := len(currentlyPlaying.Item.Album.Images) - 1
-	playerActivity.Cover = currentlyPlaying.Item.Album.Images[lastImageIndex].URL
-
-	playerActivity.Progress = currentlyPlaying.Progress
-
-	playerActivity.Duration = currentlyPlaying.Item.Duration
-
-	playerActivity.Preview = currentlyPlaying.Item.PreviewURL
+	return playerState, nil
 }
