@@ -1,10 +1,17 @@
 package player
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/zmb3/spotify/v2"
 )
+
+type PlayerStateFingerprint struct {
+	uuid  string
+	epoch time.Time
+}
 
 type PlayerState struct {
 	Track    string `json:"track"`
@@ -14,28 +21,36 @@ type PlayerState struct {
 	Progress int    `json:"progress"`
 	Duration int    `json:"duration"`
 	Preview  string `json:"preview"`
+	URL      string `json:"url"`
+	epoch    time.Time
 }
 
 type PlayerStateInterface interface {
-	SetTrack(*spotify.FullTrack) error
-	SetAlbum(*spotify.FullTrack) error
-	SetArtist(*spotify.FullTrack) error
-	SetProgress(*spotify.CurrentlyPlaying) error
-	SetDuration() error
-	SetPreview() error
+	SetPlayerState(*spotify.CurrentlyPlaying) error
+	GetFingerprint() PlayerStateFingerprint
 }
 
-func (state *PlayerState) SetTrack(track *spotify.FullTrack) error {
+func (state *PlayerState) SetPlayerState(currentlyPlaying *spotify.CurrentlyPlaying) {
+	state.setTrack(currentlyPlaying.Item)
+	state.setAlbum(currentlyPlaying.Item)
+	state.setArtist(currentlyPlaying.Item)
+	state.setPreview(currentlyPlaying.Item)
+	state.setDuration(currentlyPlaying.Item)
+	state.setURL(currentlyPlaying.Item)
+	state.setProgress(currentlyPlaying)
+}
+
+func (state *PlayerState) setTrack(track *spotify.FullTrack) error {
 	state.Track = track.Name
 	return nil
 }
 
-func (state *PlayerState) SetAlbum(track *spotify.FullTrack) error {
+func (state *PlayerState) setAlbum(track *spotify.FullTrack) error {
 	state.Album = track.Album.Name
 	return nil
 }
 
-func (state *PlayerState) SetArtist(track *spotify.FullTrack) error {
+func (state *PlayerState) setArtist(track *spotify.FullTrack) error {
 	var artists []string
 	for _, artist := range track.Artists {
 		artists = append(artists, artist.Name)
@@ -44,17 +59,45 @@ func (state *PlayerState) SetArtist(track *spotify.FullTrack) error {
 	return nil
 }
 
-func (state *PlayerState) SetProgress(currentlyPlaying *spotify.CurrentlyPlaying) error {
+func (state *PlayerState) setProgress(currentlyPlaying *spotify.CurrentlyPlaying) error {
 	state.Progress = currentlyPlaying.Progress
+
+	currentTime := time.UnixMilli(currentlyPlaying.Timestamp)
+	state.epoch = currentTime.Add(time.Duration(state.Progress))
+
 	return nil
 }
 
-func (state *PlayerState) SetDuration(track *spotify.FullTrack) error {
+func (state *PlayerState) setDuration(track *spotify.FullTrack) error {
 	state.Duration = track.Duration
 	return nil
 }
 
-func (state *PlayerState) SetPreview(track *spotify.FullTrack) error {
+func (state *PlayerState) setURL(track *spotify.FullTrack) error {
+	if url, ok := track.Album.ExternalURLs["spotify"]; ok {
+		state.URL = url
+		if track.ID != "" {
+			state.URL = fmt.Sprintf("%s?highlight=spotify:track:%s", state.URL, track.ID)
+		}
+		return nil
+	}
+
+	state.URL = track.ExternalURLs["spotify"]
+	return nil
+}
+
+func (state *PlayerState) setPreview(track *spotify.FullTrack) error {
 	state.Preview = track.PreviewURL
 	return nil
+}
+
+func (state *PlayerState) GetFingerprint() (PlayerStateFingerprint, error) {
+	if state.URL == "" || state.epoch.IsZero() {
+		return PlayerStateFingerprint{}, fmt.Errorf("incomplete data")
+	}
+
+	return PlayerStateFingerprint{
+		uuid:  state.URL,
+		epoch: state.epoch,
+	}, nil
 }

@@ -40,6 +40,11 @@ func main() {
 				continue
 			}
 
+			if !player.DetectStateChange(&state) {
+				continue
+			}
+			player.SetPreviousState(&state)
+
 			b, err := json.Marshal(state)
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
