@@ -26,9 +26,11 @@ func main() {
 	broker := broker.NewServer()
 	player := player.NewPlayer()
 
+	pollingRate := time.Second * 2
+
 	go func() {
 		for {
-			time.Sleep(time.Second * 2)
+			time.Sleep(pollingRate)
 
 			if !broker.Playing {
 				continue
@@ -44,6 +46,8 @@ func main() {
 				continue
 			}
 			player.SetPreviousState(&state)
+
+			updatePollingRate(state.Playing, &pollingRate)
 
 			b, err := json.Marshal(state)
 			if err != nil {
@@ -68,4 +72,12 @@ func main() {
 		Handler: h2c.NewHandler(handler, h2s),
 	}
 	log.Fatal("HTTP server error: ", server.ListenAndServe())
+}
+
+func updatePollingRate(playState bool, pollingRate *time.Duration) {
+	if playState {
+		*pollingRate = time.Duration(time.Second * 2)
+	} else {
+		*pollingRate = time.Duration(time.Second * 10)
+	}
 }

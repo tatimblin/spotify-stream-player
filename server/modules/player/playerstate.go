@@ -14,6 +14,7 @@ type PlayerStateFingerprint struct {
 }
 
 type PlayerState struct {
+	Playing  bool   `json:"playing"`
 	Track    string `json:"track"`
 	Album    string `json:"album"`
 	Artists  string `json:"artists"`
@@ -37,6 +38,7 @@ func (state *PlayerState) SetPlayerState(currentlyPlaying *spotify.CurrentlyPlay
 	state.setPreview(currentlyPlaying.Item)
 	state.setDuration(currentlyPlaying.Item)
 	state.setURL(currentlyPlaying.Item)
+	state.setPlaying(currentlyPlaying)
 	state.setProgress(currentlyPlaying)
 }
 
@@ -56,6 +58,12 @@ func (state *PlayerState) setArtist(track *spotify.FullTrack) error {
 		artists = append(artists, artist.Name)
 	}
 	state.Artists = strings.Join(artists, ", ")
+	return nil
+}
+
+func (state *PlayerState) setPlaying(currentlyPlaying *spotify.CurrentlyPlaying) error {
+	state.Playing = currentlyPlaying.Playing
+
 	return nil
 }
 
