@@ -13,6 +13,14 @@ type PlayerStateFingerprint struct {
 	epoch time.Time
 }
 
+type PlayerStateFingerprintInterface interface {
+	IsZero() bool
+}
+
+func (psf *PlayerStateFingerprint) IsZero() bool {
+	return psf.epoch.IsZero() && psf.uuid == ""
+}
+
 type PlayerState struct {
 	Playing  bool   `json:"playing"`
 	Track    string `json:"track"`
@@ -34,6 +42,7 @@ type PlayerStateInterface interface {
 func (state *PlayerState) SetPlayerState(currentlyPlaying *spotify.CurrentlyPlaying) {
 	state.setTrack(currentlyPlaying.Item)
 	state.setAlbum(currentlyPlaying.Item)
+	state.setCover(currentlyPlaying.Item)
 	state.setArtist(currentlyPlaying.Item)
 	state.setPreview(currentlyPlaying.Item)
 	state.setDuration(currentlyPlaying.Item)
@@ -49,6 +58,16 @@ func (state *PlayerState) setTrack(track *spotify.FullTrack) error {
 
 func (state *PlayerState) setAlbum(track *spotify.FullTrack) error {
 	state.Album = track.Album.Name
+	return nil
+}
+
+func (state *PlayerState) setCover(track *spotify.FullTrack) error {
+	if len(track.Album.Images) == 0 {
+		return fmt.Errorf("no image for song")
+	}
+
+	lastImageIndex := len(track.Album.Images) - 1
+	state.Cover = track.Album.Images[lastImageIndex].URL
 	return nil
 }
 

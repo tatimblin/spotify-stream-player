@@ -7,33 +7,18 @@ import (
 )
 
 type Broker struct {
-
-	// Events are pushed to this channel by the main events-gathering routine
-	Notifier chan []byte
-
-	Playing bool
-
-	// New client connections
-	newClients chan chan []byte
-
-	// Closed client connections
+	Notifier       chan []byte
+	Listening      bool
+	newClients     chan chan []byte
 	closingClients chan chan []byte
-
-	// Client connections registry
-	clients map[chan []byte]bool
+	clients        map[chan []byte]bool
 }
 
-type BrokerInterface interface {
-	NewServer() *Broker
-	AddClient() chan []byte
-	RemoveClient(chan []byte)
-}
-
-func NewServer() (broker *Broker) {
+func NewBroker() (broker *Broker) {
 	// Instantiate a broker
 	broker = &Broker{
 		Notifier:       make(chan []byte, 1),
-		Playing:        false,
+		Listening:      false,
 		newClients:     make(chan chan []byte),
 		closingClients: make(chan chan []byte),
 		clients:        make(map[chan []byte]bool),
@@ -43,6 +28,14 @@ func NewServer() (broker *Broker) {
 	go broker.listen()
 
 	return
+}
+
+type BrokerInterface interface {
+	ServeHTTP(http.ResponseWriter, *http.Request)
+	AddClient() chan []byte
+	RemoveClient(chan []byte)
+	Notify([]byte)
+	IsListening() bool
 }
 
 func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -91,11 +84,11 @@ func (broker *Broker) listen() {
 			broker.clients[s] = true
 			log.Printf("Client added. %d registered clients", len(broker.clients))
 			if len(broker.clients) > 0 {
-				broker.Playing = true
+				broker.Listening = true
 			}
 		case s := <-broker.closingClients:
 			if len(broker.clients) == 1 {
-				broker.Playing = false
+				broker.Listening = false
 			}
 			delete(broker.clients, s)
 			log.Printf("Removed client. %d registered clients", len(broker.clients))
@@ -112,4 +105,12 @@ func (broker *Broker) AddClient() chan []byte {
 
 func (broker *Broker) RemoveClient(messageChan chan []byte) {
 	broker.closingClients <- messageChan
+}
+
+func (broker *Broker) Notify(b []byte) {
+	broker.Notifier <- b
+}
+
+func (broker *Broker) IsListening() bool {
+	return broker.Listening
 }

@@ -23,20 +23,23 @@ func main() {
 		log.Fatalf("Error loading .env file: %s", err)
 	}
 
-	broker := broker.NewServer()
-	player := player.NewPlayer()
-
-	pollingRate := time.Second * 2
+	var state = player.PlayerState{}
+	var (
+		broker      broker.BrokerInterface = broker.NewBroker()
+		player      player.PlayerInterface = player.NewPlayer()
+		pollingRate                        = time.Second * 2
+	)
 
 	go func() {
 		for {
 			time.Sleep(pollingRate)
+			updatePollingRate(&pollingRate, state.Playing)
 
-			if !broker.Playing {
+			if !broker.IsListening() {
 				continue
 			}
 
-			state, err := player.NowPlaying()
+			state, err = player.NowPlaying()
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
 				continue
@@ -47,14 +50,12 @@ func main() {
 			}
 			player.SetPreviousState(&state)
 
-			updatePollingRate(state.Playing, &pollingRate)
-
 			b, err := json.Marshal(state)
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
 				continue
 			}
-			broker.Notifier <- []byte(b)
+			broker.Notify(b)
 		}
 	}()
 
@@ -74,7 +75,7 @@ func main() {
 	log.Fatal("HTTP server error: ", server.ListenAndServe())
 }
 
-func updatePollingRate(playState bool, pollingRate *time.Duration) {
+func updatePollingRate(pollingRate *time.Duration, playState bool) {
 	if playState {
 		*pollingRate = time.Duration(time.Second * 2)
 	} else {

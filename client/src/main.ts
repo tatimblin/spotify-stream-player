@@ -12,16 +12,11 @@ declare global {
   }
 }
 
-interface Link {
-  label: string,
-  url?: string,
-}
-
 interface Response {
-  track: Link,
-  album: Link,
-  artist: Link,
-  cover: string,
+  track: string,
+  album: string,
+  artists: string,
+  cover?: string,
   progress: number,
   duration: number,
   preview?: string,
@@ -36,9 +31,9 @@ class SpotifyPlayer extends HTMLElement {
 
     this.#source = "http://localhost:8080/";
     this.#data = {
-      track: { label: "test" },
-      album: { label: "test" },
-      artist: { label: "test" },
+      track: "",
+      album: "",
+      artists: "",
       cover: "",
       progress: 0,
       duration: 0,
@@ -54,6 +49,7 @@ class SpotifyPlayer extends HTMLElement {
     evtSource.onmessage = (event: Event) => {
       const messageEvent = (event as MessageEvent);
       this.#data = JSON.parse(messageEvent.data);
+      console.log(this.#data)
       this.render()
     }
 
@@ -63,11 +59,11 @@ class SpotifyPlayer extends HTMLElement {
   render() {
     this.innerHTML = `
         <div class="${classes.details}">
-          <img class="${classes.details_album}" src="${this.#data.cover}"/>
+          ${this.#data.cover && `<img class="${classes.details_album}" src="${this.#data.cover}"/>`}
           <div>
-            <span class="${classes.details_head}">${this.#data.track.label}</span>
+            <span class="${classes.details_head}">${this.#data.track}</span>
             <br/>
-            <span class="${classes.details_rib}">${this.#data.artist.label} – ${this.#data.album.label}</span>
+            <span class="${classes.details_rib}">${this.#data.artists} – ${this.#data.album}</span>
           </div>
         </div>
         <div class="${classes.progress}">

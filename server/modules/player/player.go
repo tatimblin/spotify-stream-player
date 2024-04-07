@@ -25,13 +25,13 @@ func NewPlayer() *Player {
 }
 
 type PlayerInterface interface {
-	NowPlaying() (*spotify.CurrentlyPlaying, error)
+	NowPlaying() (PlayerState, error)
 	DetectStateChange(*PlayerState) bool
 	SetPreviousState(*PlayerState)
 }
 
 func (player *Player) NowPlaying() (PlayerState, error) {
-	playerState := PlayerState{}
+	var playerState = PlayerState{}
 
 	nowPlaying, err := player.client.PlayerCurrentlyPlaying(player.ctx)
 	if err != nil {
@@ -50,14 +50,17 @@ func (player *Player) NowPlaying() (PlayerState, error) {
 // Detect state change
 func (player *Player) DetectStateChange(playerState *PlayerState) bool {
 	newState, err := playerState.GetFingerprint()
-	if err != nil {
+	if err != nil || newState.IsZero() {
 		fmt.Printf("could not get state: %v\n", err)
+		return true
+	}
+
+	if player.fingerprint.IsZero() {
 		return true
 	}
 
 	timeDifference := player.fingerprint.epoch.Sub(newState.epoch)
 	if timeDifference.Abs() > time.Second {
-		fmt.Println("epoch", timeDifference.Abs())
 		return true
 	}
 
