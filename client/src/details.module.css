@@ -5,16 +5,16 @@
   margin-bottom: 8px;
 }
 
-.details_album {
+.album {
   width: 4em;
   height: 4em;
   border-radius: 2px;
 }
 
-.details_head {
+.head {
   font-weight: 600;
 }
 
-.details_rib {
+.rib {
   font-size: 0.9em;
 }

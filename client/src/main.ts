@@ -1,6 +1,9 @@
-import Timestamp from "./timestamp.ts";
-
-import classes from './style.module.css'
+// import Timestamp from "./timestamp.ts";
+import Reactive from "./reactive";
+import Details from "./details";
+import type { TrackInterface } from "./details";
+import Progress from "./progress";
+import type { ProgressInterface } from "./progress";
 
 interface EventResponse extends Event {
   data: Response,
@@ -20,76 +23,53 @@ interface Response {
   progress: number,
   duration: number,
   preview?: string,
+  playing: boolean,
 }
 
 class SpotifyPlayer extends HTMLElement {
   #source: string;
-  #data: Response;
+  #details: Reactive<TrackInterface>;
+  #progress: Reactive<ProgressInterface>;
+  #playing: boolean;
 
   constructor() {
     super();
 
-    this.#source = "http://localhost:8080/";
-    this.#data = {
-      track: "",
-      album: "",
-      artists: "",
-      cover: "",
-      progress: 0,
-      duration: 0,
-    };
+    this.#details = new Reactive<TrackInterface>("details", undefined, Details);
+    this.#progress = new Reactive<ProgressInterface>("progress", undefined, Progress);
 
-    // setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+    this.render(this.#details, this.#progress);
+
+    this.#source = "http://localhost:8080/";
   }
 
   connectedCallback() {
-    // this.attachShadow({ mode: "open" });
-
     const evtSource = new EventSource(this.#source);
     evtSource.onmessage = (event: Event) => {
       const messageEvent = (event as MessageEvent);
-      this.#data = JSON.parse(messageEvent.data);
-      console.log(this.#data)
-      this.render()
+      const data = JSON.parse(messageEvent.data) as Response;
+      this.#details.set({
+        track: data.track,
+        album: data.album,
+        artists: data.artists,
+        cover: data.cover,
+        preview: data.preview,
+      });
+      this.#progress.set({
+        progress: data.progress,
+        duration: data.duration,
+      });
+      this.#playing = data.playing;
     }
-
-    evtSource.addEventListener
   }
 
-  render() {
+  render(...components: Reactive<any>[]) {
+    const [Details, Progress] = components;
+
     this.innerHTML = `
-        <div class="${classes.details}">
-          ${this.#data.cover && `<img class="${classes.details_album}" src="${this.#data.cover}"/>`}
-          <div>
-            <span class="${classes.details_head}">${this.#data.track}</span>
-            <br/>
-            <span class="${classes.details_rib}">${this.#data.artists} – ${this.#data.album}</span>
-          </div>
-        </div>
-        <div class="${classes.progress}">
-          <progress
-            class="${classes.progress_bar}"
-            value="${this.#data.progress}"
-            max="${this.#data.duration}"
-          >
-              ${this.getProgress()}%
-          </progress>
-          <div class="${classes.progress_duration}">
-            ${Timestamp({
-              className: classes.progress_duration_timestamp,
-              milliseconds: this.#data.progress,
-            })}
-            ${Timestamp({
-              className: classes.progress_duration_timestamp,
-              milliseconds: this.#data.duration,
-            })}
-          </div>
-        </div>
-      `;
-  }
-
-  getProgress(): number {
-    return Math.floor((this.#data.progress / this.#data.duration) * 100);
+      ${Details.create()}
+      ${Progress.create()}
+    `;
   }
 }
 

@@ -45,10 +45,10 @@ func main() {
 				continue
 			}
 
-			if !player.DetectStateChange(&state) {
-				continue
-			}
-			player.SetPreviousState(&state)
+			// if !player.DetectStateChange(&state) {
+			// 	continue
+			// }
+			// player.SetPreviousState(&state)
 
 			b, err := json.Marshal(state)
 			if err != nil {
