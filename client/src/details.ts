@@ -8,7 +8,7 @@ export interface TrackInterface {
   preview?: string,
 }
 
-export default function(props: TrackInterface) {
+export default function(props: Partial<TrackInterface>) {
   return `
     <div class="${classes.details}">
       ${props.cover && `<img class="${classes.album}" src="${props.cover}"/>`}

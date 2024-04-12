@@ -4,9 +4,20 @@ import classes from "./progress.module.css";
 export interface ProgressInterface {
   progress: number,
   duration: number,
+  isPlaying: boolean,
 }
 
-export default function(props: ProgressInterface) {
+export default function(props: Partial<ProgressInterface>, set?: (data: Partial<ProgressInterface>) => void) {
+  if (!props.duration || !props.progress) {
+    return ``;
+  }
+
+  if (set) {
+    set({
+      progress: 0,
+    });
+  }
+  
   return `
     <div class="${classes.progress}">
       ${Timestamp({

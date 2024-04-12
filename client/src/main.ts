@@ -35,8 +35,8 @@ class SpotifyPlayer extends HTMLElement {
   constructor() {
     super();
 
-    this.#details = new Reactive<TrackInterface>("details", undefined, Details);
-    this.#progress = new Reactive<ProgressInterface>("progress", undefined, Progress);
+    this.#details = new Reactive<TrackInterface>("details", null, Details);
+    this.#progress = new Reactive<ProgressInterface>("progress", null, Progress);
 
     this.render(this.#details, this.#progress);
 
@@ -58,6 +58,7 @@ class SpotifyPlayer extends HTMLElement {
       this.#progress.set({
         progress: data.progress,
         duration: data.duration,
+        isPlaying: data.playing,
       });
       this.#playing = data.playing;
     }

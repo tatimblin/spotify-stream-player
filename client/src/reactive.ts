@@ -1,12 +1,16 @@
 export default class Reactive<T> {
-  #data: T | undefined;
+  #data: Partial<T>;
   #element?: Element;
   #name: string;
-  #template: (props: T) => string;
+  #template: (props: Partial<T>, update?: (data: Partial<T>) => void) => string;
 
-  constructor(name: string, data: T | undefined, template: (props: T) => string) {
+  constructor(name: string, data: T | null, template: (props: Partial<T>, update?: (data: Partial<T>) => void) => string) {
     this.#name = name;
-    this.#data = data
+    if (data === null) {
+      this.#data = {};
+    } else {
+      this.#data = data;
+    }
     this.#template = template;
   }
 
@@ -26,12 +30,18 @@ export default class Reactive<T> {
     return this.#data;
   }
 
-  set(data: T) {
+  set(data: Partial<T>) {
+    console.log("calling...")
     if (!data) {
       return false;
     }
 
-    this.#data = data;
+    if (typeof data === 'object') {
+      this.#data = {...this.#data, ...data};
+    } else {
+      this.#data = data;
+    }
+
     this.render();
     return true;
   }
@@ -41,7 +51,8 @@ export default class Reactive<T> {
       return;
     }
 
-    this.#getElement().innerHTML = this.#template(this.#data);
+    // todo: rerenders from calling set should not call set again
+    this.#getElement().innerHTML = this.#template(this.#data, this.set.bind(this));
   }
 
   create() {
