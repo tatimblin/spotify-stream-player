@@ -1,9 +1,13 @@
-interface TimestampInterface {
+export interface TimestampInterface {
   className: string
   milliseconds: number
 }
 
-export default function Timestamp (props: TimestampInterface) {
+export default function Timestamp (props: Partial<TimestampInterface>) {
+  if (!props.milliseconds) {
+    return ``;
+  }
+
   return `<span class="${props.className}">${duration(props.milliseconds)}</span>`;
 }
 

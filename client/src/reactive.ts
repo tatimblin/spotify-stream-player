@@ -2,9 +2,10 @@ export default class Reactive<T> {
   #data: Partial<T>;
   #element?: Element;
   #name: string;
-  #template: (props: Partial<T>, update?: (data: Partial<T>) => void) => string;
+  #template: (props: Partial<T>, set?: ((data: Partial<T>) => void) | undefined) => string;
+  #rendering: boolean = false;
 
-  constructor(name: string, data: T | null, template: (props: Partial<T>, update?: (data: Partial<T>) => void) => string) {
+  constructor(name: string, data: T | null, template: (props: Partial<T>, set?: ((data: Partial<T>) => void) | undefined) => string) {
     this.#name = name;
     if (data === null) {
       this.#data = {};
@@ -31,7 +32,6 @@ export default class Reactive<T> {
   }
 
   set(data: Partial<T>) {
-    console.log("calling...")
     if (!data) {
       return false;
     }
@@ -42,7 +42,11 @@ export default class Reactive<T> {
       this.#data = data;
     }
 
-    this.render();
+    if (!this.#rendering) {
+      this.#rendering = true;
+      this.render();
+      this.#rendering = false;
+    }
     return true;
   }
 

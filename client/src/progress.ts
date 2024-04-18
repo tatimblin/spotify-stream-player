@@ -7,17 +7,11 @@ export interface ProgressInterface {
   isPlaying: boolean,
 }
 
-export default function(props: Partial<ProgressInterface>, set?: (data: Partial<ProgressInterface>) => void) {
+export default function(props: Partial<ProgressInterface>) {
   if (!props.duration || !props.progress) {
     return ``;
-  }
+  }  
 
-  if (set) {
-    set({
-      progress: 0,
-    });
-  }
-  
   return `
     <div class="${classes.progress}">
       ${Timestamp({

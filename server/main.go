@@ -27,7 +27,7 @@ func main() {
 	var (
 		broker      broker.BrokerInterface = broker.NewBroker()
 		player      player.PlayerInterface = player.NewPlayer()
-		pollingRate                        = time.Second * 2
+		pollingRate                        = time.Second * 5
 	)
 
 	go func() {
@@ -45,10 +45,10 @@ func main() {
 				continue
 			}
 
-			// if !player.DetectStateChange(&state) {
-			// 	continue
-			// }
-			// player.SetPreviousState(&state)
+			if !player.DetectStateChange(&state) {
+				continue
+			}
+			player.SetPreviousState(&state)
 
 			b, err := json.Marshal(state)
 			if err != nil {
