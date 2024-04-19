@@ -31,6 +31,7 @@ class SpotifyPlayer extends HTMLElement {
   #details: Reactive<TrackInterface>;
   #progress: Reactive<ProgressInterface>;
   #playing: boolean = false;
+  #timer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     super();
@@ -61,23 +62,32 @@ class SpotifyPlayer extends HTMLElement {
         isPlaying: data.playing,
       });
       this.#playing = data.playing;
-    }
 
-    // wip
-    let running = false;
-    const interval = setInterval(() => {
-      const { progress, duration } = this.#progress.get();
-      console.log(progress && duration && (progress < duration))
-      if (progress && duration && progress < duration) {
-        running = true
-        console.log("test")
-        this.#progress.set({
-          progress: progress + 1000,
-        });
-      } else if (running) {
-        clearInterval(interval);
+      if (this.#playing) {
+        this.#timer = this.#createTimer(1000);
+      } else if (this.#timer) {
+        clearInterval(this.#timer);
       }
-    }, 1000)
+    }
+  }
+
+  #createTimer(ms: number) {
+    return setInterval(() => {
+      if (!this.#playing) {
+        clearInterval(this.#timer);
+      }
+      const { progress, duration } = this.#progress.get();
+      if (progress) {
+        this.#progress.set({
+          progress: progress + ms,
+        });
+      }
+      if (progress && duration && progress >= duration) {
+        this.#progress.set({
+          progress: 0,
+        });
+      }
+    }, ms);
   }
 
   render(...components: Reactive<any>[]) {
