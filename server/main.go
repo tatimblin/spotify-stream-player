@@ -23,11 +23,16 @@ func main() {
 		log.Fatalf("Error loading .env file: %s", err)
 	}
 
-	var state = player.PlayerState{}
+	onDestroyMsg, err := json.Marshal(player.PlayerState{Destroy: true})
+	if err != nil {
+		log.Fatalf("Error creating onDestroy event")
+	}
+
 	var (
-		broker      broker.BrokerInterface = broker.NewBroker()
-		player      player.PlayerInterface = player.NewPlayer()
-		pollingRate                        = time.Second * 5
+		state       = player.PlayerState{}
+		broker      = broker.NewBroker(onDestroyMsg)
+		player      = player.NewPlayer()
+		pollingRate = time.Second * 5
 	)
 
 	go func() {

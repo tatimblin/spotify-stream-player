@@ -1,7 +1,6 @@
 package subscriber
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -49,7 +48,6 @@ func (a *action) Routine(callback func(), seconds time.Duration) {
 
 	for {
 		time.Sleep(time.Second * seconds)
-		fmt.Println("state:", state)
 		select {
 		case c := <-a.command:
 			switch c {

@@ -17,11 +17,13 @@ export default function(props: Partial<ProgressInterface>) {
       ${Timestamp({
         className: classes.progress_timestamp,
         milliseconds: props.progress,
+        active: true,
       })}
       <progress
+        id="progress"
         class="${classes.progress_bar}"
-        value="${props.progress}"
-        max="${props.duration}"
+        value="${(props.progress / props.duration) * 100}"
+        max="${100}"
       >
           ${getPercent(props.progress, props.duration)}%
       </progress>

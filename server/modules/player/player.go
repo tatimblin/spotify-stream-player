@@ -3,7 +3,6 @@ package player
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -11,7 +10,7 @@ import (
 type Player struct {
 	client      *spotify.Client
 	ctx         context.Context
-	fingerprint PlayerStateFingerprint
+	fingerprint Fingerprint
 }
 
 func NewPlayer() *Player {
@@ -20,7 +19,7 @@ func NewPlayer() *Player {
 	return &Player{
 		client:      GetInstance(ctx),
 		ctx:         ctx,
-		fingerprint: PlayerStateFingerprint{},
+		fingerprint: Fingerprint{},
 	}
 }
 
@@ -50,17 +49,21 @@ func (player *Player) NowPlaying() (PlayerState, error) {
 // Detect state change
 func (player *Player) DetectStateChange(playerState *PlayerState) bool {
 	newState, err := playerState.GetFingerprint()
-	if err != nil || newState.IsZero() {
-		fmt.Printf("could not get state: %v\n", err)
+	if err != nil {
+		return false
+	}
+
+	// Initial state
+	if player.fingerprint.IsZero() || newState.epoch.IsZero() {
 		return true
 	}
 
-	if player.fingerprint.IsZero() {
-		return true
-	}
+	isStateChange := player.fingerprint.epoch.Sub(newState.epoch) != 0
 
-	timeDifference := player.fingerprint.epoch.Sub(newState.epoch)
-	if timeDifference.Abs() > time.Second {
+	// offset := time.Since(player.fingerprint.offset_epoch)
+	// playerState.Cursor = playerState.Cursor.Add(offset)
+
+	if isStateChange {
 		return true
 	}
 

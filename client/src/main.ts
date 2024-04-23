@@ -13,6 +13,10 @@ declare global {
   interface EventSourceEventMap {
     ['my-event']: MessageEvent<EventResponse>;
   }
+  interface Window {
+    progress: HTMLProgressElement | null;
+    time: HTMLSpanElement | null;
+  }
 }
 
 interface Response {
@@ -24,6 +28,8 @@ interface Response {
   duration: number,
   preview?: string,
   playing: boolean,
+  time: string,
+  destroy: boolean,
 }
 
 class SpotifyPlayer extends HTMLElement {
@@ -31,7 +37,9 @@ class SpotifyPlayer extends HTMLElement {
   #details: Reactive<TrackInterface>;
   #progress: Reactive<ProgressInterface>;
   #playing: boolean = false;
-  #timer?: ReturnType<typeof setTimeout>;
+  #start = 0;
+  #duration = 0;
+  #animationID?: number;
 
   constructor() {
     super();
@@ -45,49 +53,7 @@ class SpotifyPlayer extends HTMLElement {
   }
 
   connectedCallback() {
-    const evtSource = new EventSource(this.#source);
-    evtSource.onmessage = (event: Event) => {
-      const messageEvent = (event as MessageEvent);
-      const data = JSON.parse(messageEvent.data) as Response;
-      this.#details.set({
-        track: data.track,
-        album: data.album,
-        artists: data.artists,
-        cover: data.cover,
-        preview: data.preview,
-      });
-      this.#progress.set({
-        progress: data.progress,
-        duration: data.duration,
-        isPlaying: data.playing,
-      });
-      this.#playing = data.playing;
-
-      if (this.#playing) {
-        this.#timer = this.#createTimer(1000);
-      } else if (this.#timer) {
-        clearInterval(this.#timer);
-      }
-    }
-  }
-
-  #createTimer(ms: number) {
-    return setInterval(() => {
-      if (!this.#playing) {
-        clearInterval(this.#timer);
-      }
-      const { progress, duration } = this.#progress.get();
-      if (progress) {
-        this.#progress.set({
-          progress: progress + ms,
-        });
-      }
-      if (progress && duration && progress >= duration) {
-        this.#progress.set({
-          progress: 0,
-        });
-      }
-    }, ms);
+    this.#subscribe();
   }
 
   render(...components: Reactive<any>[]) {
@@ -97,6 +63,79 @@ class SpotifyPlayer extends HTMLElement {
       ${Details.create()}
       ${Progress.create()}
     `;
+  }
+
+  #subscribe() {
+    const evtSource = new EventSource(this.#source);
+    evtSource.onmessage = (event: MessageEvent) => {
+      const data = JSON.parse(event.data) as Response;
+
+      this.#details.set({
+        track: data.track,
+        album: data.album,
+        artists: data.artists,
+        cover: data.cover,
+        preview: data.preview,
+      });
+
+      this.#progress.set({
+        progress: data.progress,
+        duration: data.duration,
+        isPlaying: data.playing,
+      });
+
+      this.#start = new Date(data.time).getTime() - data.progress;
+      this.#playing = data.playing;
+      this.#duration = data.duration;
+
+      this.#clearTimer();
+      if (this.#playing && !data.destroy) {
+        this.#animationID = window.requestAnimationFrame(this.#timer);
+      }
+    }
+  }
+
+  get #timer() {
+    return () => {
+      const now = new Date().getTime();
+      const progress = now - this.#start;
+
+      if (progress > this.#duration) {
+        this.#clearTimer();
+      }
+
+      const percent = (progress / this.#duration) * 100;
+      if (window.progress) {
+        window.progress.value = percent;
+        window.progress.innerText = `${percent}%`;
+      }
+
+      if (window.time) {
+        window.time.innerText = this.#getPrettyTime(progress);
+      }
+
+      if (this.#playing && percent < 100) {
+        window.requestAnimationFrame(this.#timer);
+      }
+    }
+  }
+
+  #clearTimer() {
+    if (this.#animationID) {
+      window.cancelAnimationFrame(this.#animationID);
+      this.#animationID = undefined;
+    }
+  }
+
+  #getPrettyTime(progress: number) {
+    if (!progress) {
+      return "0:00";
+    }
+
+    const min = Math.floor(progress / (1000 * 60));
+    const sec = Math.floor(progress % (1000 * 60) / 1000);
+
+    return `${min}:${sec < 10 ? `0${sec}` : sec}`;
   }
 }
 

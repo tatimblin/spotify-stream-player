@@ -7,16 +7,11 @@
 }
 
 .progress_bar {
-  width: 100%;
-  -webkit-appearance: none;
   appearance: none;
+  width: 100%;
   border: none;
   border-radius: 100px;
   height: 4px;
-}
-
-.progress_bar::-webkit-progress-bar {
-  background-color: #f0f0f0;
 }
 
 .progress_bar::-webkit-progress-bar,
@@ -24,16 +19,15 @@
   border-radius: 100px;
 }
 
+.progress_bar::-webkit-progress-bar,
 .progress_bar::-moz-progress-bar {
   border-radius: 100px;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
-  transition: all 1s ease;
 }
 
 .progress_bar::-webkit-progress-value {
   background: #185ee2;
-  transition: all 1s ease;
 }
 
 .progress_timestamp {

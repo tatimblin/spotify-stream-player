@@ -8,35 +8,23 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-type PlayerStateFingerprint struct {
-	uuid  string
-	epoch time.Time
-}
-
-type PlayerStateFingerprintInterface interface {
-	IsZero() bool
-}
-
-func (psf *PlayerStateFingerprint) IsZero() bool {
-	return psf.epoch.IsZero() && psf.uuid == ""
-}
-
 type PlayerState struct {
-	Playing  bool   `json:"playing"`
-	Track    string `json:"track"`
-	Album    string `json:"album"`
-	Artists  string `json:"artists"`
-	Cover    string `json:"cover"`
-	Progress int    `json:"progress"`
-	Duration int    `json:"duration"`
-	Preview  string `json:"preview"`
-	URL      string `json:"url"`
-	epoch    time.Time
+	Playing  bool      `json:"playing"`
+	Track    string    `json:"track"`
+	Album    string    `json:"album"`
+	Artists  string    `json:"artists"`
+	Cover    string    `json:"cover"`
+	Progress int       `json:"progress"`
+	Duration int       `json:"duration"`
+	Preview  string    `json:"preview"`
+	URL      string    `json:"url"`
+	Cursor   time.Time `json:"time"`
+	Destroy  bool      `json:"destroy"`
 }
 
 type PlayerStateInterface interface {
 	SetPlayerState(*spotify.CurrentlyPlaying) error
-	GetFingerprint() PlayerStateFingerprint
+	GetFingerprint() Fingerprint
 }
 
 func (state *PlayerState) SetPlayerState(currentlyPlaying *spotify.CurrentlyPlaying) {
@@ -88,9 +76,7 @@ func (state *PlayerState) setPlaying(currentlyPlaying *spotify.CurrentlyPlaying)
 
 func (state *PlayerState) setProgress(currentlyPlaying *spotify.CurrentlyPlaying) error {
 	state.Progress = currentlyPlaying.Progress
-
-	currentTime := time.UnixMilli(currentlyPlaying.Timestamp)
-	state.epoch = currentTime.Add(time.Duration(state.Progress))
+	state.Cursor = time.UnixMilli(currentlyPlaying.Timestamp).UTC()
 
 	return nil
 }
@@ -118,13 +104,14 @@ func (state *PlayerState) setPreview(track *spotify.FullTrack) error {
 	return nil
 }
 
-func (state *PlayerState) GetFingerprint() (PlayerStateFingerprint, error) {
-	if state.URL == "" || state.epoch.IsZero() {
-		return PlayerStateFingerprint{}, fmt.Errorf("incomplete data")
+func (state *PlayerState) GetFingerprint() (Fingerprint, error) {
+	if state.URL == "" || state.Cursor.IsZero() {
+		return Fingerprint{}, fmt.Errorf("incomplete data")
 	}
 
-	return PlayerStateFingerprint{
-		uuid:  state.URL,
-		epoch: state.epoch,
+	return Fingerprint{
+		uuid:         state.URL,
+		epoch:        state.Cursor,
+		offset_epoch: time.Now(),
 	}, nil
 }

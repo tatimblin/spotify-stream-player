@@ -1,6 +1,7 @@
 export interface TimestampInterface {
   className: string
   milliseconds: number
+  active: boolean
 }
 
 export default function Timestamp (props: Partial<TimestampInterface>) {
@@ -8,7 +9,7 @@ export default function Timestamp (props: Partial<TimestampInterface>) {
     return ``;
   }
 
-  return `<span class="${props.className}">${duration(props.milliseconds)}</span>`;
+  return `<span ${props.active && `id="time"`} class="${props.className}">${duration(props.milliseconds)}</span>`;
 }
 
 function duration (milliseconds: number) {

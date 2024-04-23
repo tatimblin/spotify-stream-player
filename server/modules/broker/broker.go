@@ -12,9 +12,11 @@ type Broker struct {
 	newClients     chan chan []byte
 	closingClients chan chan []byte
 	clients        map[chan []byte]bool
+	lastEvent      []byte
+	destroyMessage []byte
 }
 
-func NewBroker() (broker *Broker) {
+func NewBroker(destroyMessage []byte) (broker *Broker) {
 	// Instantiate a broker
 	broker = &Broker{
 		Notifier:       make(chan []byte, 1),
@@ -22,6 +24,7 @@ func NewBroker() (broker *Broker) {
 		newClients:     make(chan chan []byte),
 		closingClients: make(chan chan []byte),
 		clients:        make(map[chan []byte]bool),
+		destroyMessage: destroyMessage,
 	}
 
 	// Set it running - listening and broadcasting events
@@ -77,11 +80,13 @@ func (broker *Broker) listen() {
 	for {
 		select {
 		case event := <-broker.Notifier:
+			broker.lastEvent = event
 			for clientMessageChan := range broker.clients {
 				clientMessageChan <- event
 			}
 		case s := <-broker.newClients:
 			broker.clients[s] = true
+			s <- broker.lastEvent
 			log.Printf("Client added. %d registered clients", len(broker.clients))
 			if len(broker.clients) > 0 {
 				broker.Listening = true
@@ -90,6 +95,7 @@ func (broker *Broker) listen() {
 			if len(broker.clients) == 1 {
 				broker.Listening = false
 			}
+			s <- broker.destroyMessage
 			delete(broker.clients, s)
 			log.Printf("Removed client. %d registered clients", len(broker.clients))
 		}
