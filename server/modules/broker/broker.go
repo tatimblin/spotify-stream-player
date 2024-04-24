@@ -14,9 +14,10 @@ type Broker struct {
 	clients        map[chan []byte]bool
 	lastEvent      []byte
 	destroyMessage []byte
+	allowedOrigins map[string]bool
 }
 
-func NewBroker(destroyMessage []byte) (broker *Broker) {
+func NewBroker(allowedOrigins map[string]bool, destroyMessage []byte) (broker *Broker) {
 	// Instantiate a broker
 	broker = &Broker{
 		Notifier:       make(chan []byte, 1),
@@ -25,6 +26,7 @@ func NewBroker(destroyMessage []byte) (broker *Broker) {
 		closingClients: make(chan chan []byte),
 		clients:        make(map[chan []byte]bool),
 		destroyMessage: destroyMessage,
+		allowedOrigins: allowedOrigins,
 	}
 
 	// Set it running - listening and broadcasting events
@@ -42,7 +44,6 @@ type BrokerInterface interface {
 }
 
 func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-
 	flusher, ok := rw.(http.Flusher)
 	if !ok {
 		http.Error(rw, "Streaming unsupported!", http.StatusInternalServerError)
@@ -52,7 +53,14 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Content-Type", "text/event-stream")
 	rw.Header().Set("Cache-Control", "no-cache")
 	rw.Header().Set("Connection", "keep-alive")
-	rw.Header().Set("Access-Control-Allow-Origin", "*")
+
+	origin := req.Header.Get("Origin")
+	if broker.allowedOrigins[origin] {
+		rw.Header().Set("Access-Control-Allow-Origin", origin)
+	} else {
+		http.Error(rw, "Origin not allowed", http.StatusForbidden)
+		return
+	}
 
 	messageChan := broker.AddClient()
 

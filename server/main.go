@@ -8,6 +8,7 @@ import (
 	"os"
 	"spotify-stream-player/server/modules/broker"
 	"spotify-stream-player/server/modules/player"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -23,6 +24,14 @@ func main() {
 		log.Fatalf("Error loading .env file: %s", err)
 	}
 
+	ORIGINS := os.Getenv("ORIGINS")
+	allowedOrigins := make(map[string]bool)
+	if ORIGINS != "" {
+		for _, origin := range strings.Split(ORIGINS, ",") {
+			allowedOrigins[origin] = true
+		}
+	}
+
 	onDestroyMsg, err := json.Marshal(player.PlayerState{Destroy: true})
 	if err != nil {
 		log.Fatalf("Error creating onDestroy event")
@@ -30,7 +39,7 @@ func main() {
 
 	var (
 		state       = player.PlayerState{}
-		broker      = broker.NewBroker(onDestroyMsg)
+		broker      = broker.NewBroker(allowedOrigins, onDestroyMsg)
 		player      = player.NewPlayer()
 		pollingRate = time.Second * 5
 	)

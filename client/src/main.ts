@@ -33,13 +33,14 @@ interface Response {
 }
 
 class SpotifyPlayer extends HTMLElement {
-  #source: string;
   #details: Reactive<TrackInterface>;
   #progress: Reactive<ProgressInterface>;
   #playing: boolean = false;
   #start = 0;
   #duration = 0;
   #animationID?: number;
+
+  observedAttributes = ["src"];
 
   constructor() {
     super();
@@ -48,8 +49,6 @@ class SpotifyPlayer extends HTMLElement {
     this.#progress = new Reactive<ProgressInterface>("progress", null, Progress);
 
     this.render(this.#details, this.#progress);
-
-    this.#source = "http://localhost:8080/";
   }
 
   connectedCallback() {
@@ -66,7 +65,11 @@ class SpotifyPlayer extends HTMLElement {
   }
 
   #subscribe() {
-    const evtSource = new EventSource(this.#source);
+    if (!this.src) {
+      return;
+    }
+
+    const evtSource = new EventSource(this.src);
     evtSource.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data) as Response;
 
@@ -136,6 +139,18 @@ class SpotifyPlayer extends HTMLElement {
     const sec = Math.floor(progress % (1000 * 60) / 1000);
 
     return `${min}:${sec < 10 ? `0${sec}` : sec}`;
+  }
+
+  get src(): string | null {
+    return this.getAttribute("src");
+  }
+
+  set src(source: string) {
+    if (source) {
+      this.setAttribute("src", source);
+    } else {
+      this.removeAttribute("src");
+    }
   }
 }
 

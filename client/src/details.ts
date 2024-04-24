@@ -14,7 +14,7 @@ export default function(props: Partial<TrackInterface>) {
       ${props.cover && `<img class="${classes.album}" src="${props.cover}"/>`}
       <div class="${classes.details_text}">
         <p class="${classes.head}">${props.track}</p>
-        <p class="${classes.rib}">${props.artists} – ${props.album} ${props.artists} – ${props.album} ${props.artists} – ${props.album}</p>
+        <p class="${classes.rib}">${props.artists} – ${props.album}</p>
       </div>
     </div>
   `;
