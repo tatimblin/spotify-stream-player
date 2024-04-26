@@ -1,12 +1,21 @@
 {
   "name": "spotify-stream-player",
+  "author": "Tristan Timblin",
+  "keywords": ["spotify", "custom element"],
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "release:major": "npm version $(semver $npm_package_version -i major) && npm publish --tag latest",
+    "release:minor": "npm version $(semver $npm_package_version -i minor) && npm publish --tag latest",
+    "release:patch": "npm version $(semver $npm_package_version -i patch) && npm publish --tag latest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tatimblin/spotify-stream-player.git"
   },
   "devDependencies": {
     "typescript": "^5.2.2",
