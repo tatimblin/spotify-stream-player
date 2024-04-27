@@ -1,12 +1,22 @@
 {
-  "name": "spotify-stream-player",
+  "name": "@tristimb/spotify-stream-player",
   "author": "Tristan Timblin",
+  "homepage": "https://github.com/tatimblin/spotify-stream-player#readme",
+  "description": "Custom HTML Element for displaying a currently playing song.",
   "keywords": [
     "spotify",
     "custom element"
   ],
-  "private": true,
-  "version": "0.0.0",
+  "license": "ISC",
+  "private": false,
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tatimblin/spotify-stream-player.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tatimblin/spotify-stream-player/issues"
+  },
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.es.js",
   "exports": {
@@ -16,6 +26,8 @@
     }
   },
   "files": [
+    "./dist/index.cjs.js",
+    "./dist/index.es.js",
     "./dist/style.css"
   ],
   "type": "module",
@@ -23,13 +35,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "release:major": "npm version $(semver $npm_package_version -i major) && npm publish --tag latest",
-    "release:minor": "npm version $(semver $npm_package_version -i minor) && npm publish --tag latest",
-    "release:patch": "npm version $(semver $npm_package_version -i patch) && npm publish --tag latest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/tatimblin/spotify-stream-player.git"
+    "postversion": "git add package.json && git commit -m $npm_package_version && git tag $npm_package_version HEAD && git push --tags"
   },
   "devDependencies": {
     "typescript": "^5.2.2",
