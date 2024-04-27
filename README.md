@@ -65,3 +65,18 @@ The server takes several environment variables for configuration.
 
 (wip)
 The client can be installed from npm `@tristimb/spotify-stream-player` or by downloading this repo and making your own build `npm run build` and importing it directly in your HTML. As long as the bundle runs the Custom Element will be registered on the DOM and can be used like `<spotify-player src="http://localhost:8080/" />`.
+
+## Deployment Notes
+
+### Google Cloud Run
+
+```
+gcloud run deploy spotify-stream-player --region us-east4 --source ./server
+```
+
+### npm Package
+
+```
+npm version patch | minor | major
+npm publish
+```
