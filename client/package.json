@@ -1,9 +1,23 @@
 {
   "name": "spotify-stream-player",
   "author": "Tristan Timblin",
-  "keywords": ["spotify", "custom element"],
+  "keywords": [
+    "spotify",
+    "custom element"
+  ],
   "private": true,
   "version": "0.0.0",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.es.js",
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs.js",
+      "import": "./dist/index.es.js"
+    }
+  },
+  "files": [
+    "./dist/style.css"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,4 +1,3 @@
-// import Timestamp from "./timestamp.ts";
 import Reactive from "./reactive";
 import Details from "./details";
 import type { TrackInterface } from "./details";
@@ -32,7 +31,7 @@ interface Response {
   destroy: boolean,
 }
 
-class SpotifyPlayer extends HTMLElement {
+export default class SpotifyPlayer extends HTMLElement {
   #details: Reactive<TrackInterface>;
   #progress: Reactive<ProgressInterface>;
   #playing: boolean = false;
@@ -153,5 +152,3 @@ class SpotifyPlayer extends HTMLElement {
     }
   }
 }
-
-customElements.define("spotify-player", SpotifyPlayer);
