@@ -99,6 +99,7 @@ customElements.define("spotify-player", SpotifyPlayer);
 ```
 
 ##### Examples
+- [Vite 5](https://github.com/tatimblin/spotify-stream-player/blob/main/client/index.html)
 - [Vue 2](https://github.com/tatimblin/whois.timblin.io/blob/60f9cc66363fa6f808dfb687637f45456f0ec360/src/components/MusicPlayer.vue)
 
 ## Deployment Notes
