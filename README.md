@@ -2,8 +2,7 @@
 
 ![preview](preview.png)
 
-[Live Demo](https://www.tristantimblin.dev/) | [Video Demo](https://x.com/tatimblin/status/1784282763547615440)
-
+[Video Demo](https://x.com/tatimblin/status/1784282763547615440) | [Live Demo](https://www.tristantimblin.dev/) _(I have to be currently listening to music to see live)_
 
 This project is an implementation of a read-only music player similar to the one on your phones lockscreen. It has two parts:
 
