@@ -38,10 +38,14 @@ func (player *Player) NowPlaying() (PlayerState, error) {
 	}
 
 	if nowPlaying.Item == nil {
-		return playerState, fmt.Errorf("not a track")
+		recentlyPlayed, err := player.getRecentlyPlayedTrack()
+		if err != nil {
+			return playerState, err
+		}
+		playerState.SetPlayerStateSimple(&recentlyPlayed)
+	} else {
+		playerState.SetPlayerState(nowPlaying)
 	}
-
-	playerState.SetPlayerState(nowPlaying)
 
 	return playerState, nil
 }
@@ -82,4 +86,19 @@ func (player *Player) SetPreviousState(playerState *PlayerState) {
 		return
 	}
 	player.fingerprint = fingerprint
+}
+
+func (player *Player) getRecentlyPlayedTrack() (spotify.SimpleTrack, error) {
+	recentlyPlayedList, err := player.client.PlayerRecentlyPlayedOpt(player.ctx, &spotify.RecentlyPlayedOptions{
+		Limit: 1,
+	})
+	if err != nil {
+		return spotify.SimpleTrack{}, err
+	}
+
+	if len(recentlyPlayedList) == 0 {
+		return spotify.SimpleTrack{}, fmt.Errorf("no recent track found")
+	}
+
+	return recentlyPlayedList[0].Track, nil
 }

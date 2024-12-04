@@ -101,6 +101,18 @@ customElements.define("spotify-player", SpotifyPlayer);
 - [Vite 5](https://github.com/tatimblin/spotify-stream-player/blob/main/client/index.html)
 - [Vue 2](https://github.com/tatimblin/whois.timblin.io/blob/60f9cc66363fa6f808dfb687637f45456f0ec360/src/components/MusicPlayer.vue)
 
+## Local Development
+
+1. Start proxy server
+  * `cd server`
+  * `go run main.go`
+2. Open a new tab in terminal
+3. Start front-end server
+  * `cd client`
+  * `npm run dev`
+4. Visit [localhost:5173](http://localhost:5173/)
+
+
 ## Deployment Notes
 
 ### Google Cloud Run

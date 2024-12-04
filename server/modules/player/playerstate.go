@@ -28,80 +28,95 @@ type PlayerStateInterface interface {
 }
 
 func (state *PlayerState) SetPlayerState(currentlyPlaying *spotify.CurrentlyPlaying) {
-	state.setTrack(currentlyPlaying.Item)
-	state.setAlbum(currentlyPlaying.Item)
-	state.setCover(currentlyPlaying.Item)
-	state.setArtist(currentlyPlaying.Item)
-	state.setPreview(currentlyPlaying.Item)
-	state.setDuration(currentlyPlaying.Item)
-	state.setURL(currentlyPlaying.Item)
-	state.setPlaying(currentlyPlaying)
-	state.setProgress(currentlyPlaying)
+	state.setTrack(currentlyPlaying.Item.Name)
+	state.setAlbum(currentlyPlaying.Item.Album)
+	state.setCover(currentlyPlaying.Item.Album)
+	state.setArtist(currentlyPlaying.Item.Artists)
+	state.setPreview(currentlyPlaying.Item.PreviewURL)
+	state.setDuration(currentlyPlaying.Item.Duration)
+	state.setURL(currentlyPlaying.Item.ExternalURLs, currentlyPlaying.Item.ID, currentlyPlaying.Item.Album)
+	state.setPlaying(currentlyPlaying.Playing)
+	state.setProgressMS(currentlyPlaying.Progress, currentlyPlaying.Timestamp)
 }
 
-func (state *PlayerState) setTrack(track *spotify.FullTrack) error {
-	state.Track = track.Name
+func (state *PlayerState) SetPlayerStateSimple(track *spotify.SimpleTrack) {
+	state.setTrack(track.Name)
+	state.setCover(track.Album)
+	state.setArtist(track.Artists)
+	state.setPreview(track.PreviewURL)
+	state.setDuration(track.Duration)
+	state.setURL(track.ExternalURLs, track.ID, track.Album)
+	state.setPlaying(false)
+	state.setProgressMS(track.Duration, time.Now().Unix())
+}
+
+func (state *PlayerState) setTrack(name string) error {
+	state.Track = name
 	return nil
 }
 
-func (state *PlayerState) setAlbum(track *spotify.FullTrack) error {
-	state.Album = track.Album.Name
+func (state *PlayerState) setAlbum(album spotify.SimpleAlbum) error {
+	state.Album = album.Name
 	return nil
 }
 
-func (state *PlayerState) setCover(track *spotify.FullTrack) error {
-	if len(track.Album.Images) == 0 {
+func (state *PlayerState) setCover(album spotify.SimpleAlbum) error {
+	if len(album.Images) == 0 {
 		return fmt.Errorf("no image for song")
 	}
 
-	lastImageIndex := len(track.Album.Images) - 1
-	state.Cover = track.Album.Images[lastImageIndex].URL
+	lastImageIndex := len(album.Images) - 1
+	state.Cover = album.Images[lastImageIndex].URL
 	return nil
 }
 
-func (state *PlayerState) setArtist(track *spotify.FullTrack) error {
-	var artists []string
-	for _, artist := range track.Artists {
-		artists = append(artists, artist.Name)
+func (state *PlayerState) setArtist(artists []spotify.SimpleArtist) error {
+	var artistNames []string
+	for _, artist := range artists {
+		artistNames = append(artistNames, artist.Name)
 	}
-	state.Artists = strings.Join(artists, ", ")
+	state.Artists = strings.Join(artistNames, ", ")
 	return nil
 }
 
-func (state *PlayerState) setPlaying(currentlyPlaying *spotify.CurrentlyPlaying) error {
-	state.Playing = currentlyPlaying.Playing
-
-	return nil
-}
-
-func (state *PlayerState) setProgress(currentlyPlaying *spotify.CurrentlyPlaying) error {
-	state.Progress = currentlyPlaying.Progress
-	state.Cursor = time.UnixMilli(currentlyPlaying.Timestamp).UTC()
+func (state *PlayerState) setPlaying(playing bool) error {
+	state.Playing = playing
 
 	return nil
 }
 
-func (state *PlayerState) setDuration(track *spotify.FullTrack) error {
-	state.Duration = track.Duration
+func (state *PlayerState) setProgressMS(progress int, timestamp int64) error {
+	state.Progress = progress
+	state.Cursor = time.UnixMilli(timestamp).UTC()
+
 	return nil
 }
 
-func (state *PlayerState) setURL(track *spotify.FullTrack) error {
-	if url, ok := track.Album.ExternalURLs["spotify"]; ok {
+func (state *PlayerState) setDuration(duration int) error {
+	state.Duration = duration
+	return nil
+}
+
+func (state *PlayerState) setURL(urls map[string]string, id spotify.ID, album spotify.SimpleAlbum) error {
+	if url, ok := album.ExternalURLs["spotify"]; ok {
 		state.URL = url
-		if track.ID != "" {
-			state.URL = fmt.Sprintf("%s?highlight=spotify:track:%s", state.URL, track.ID)
+		if id != "" {
+			state.URL = fmt.Sprintf("%s?highlight=spotify:track:%s", url, id)
 		}
 		return nil
 	}
 
-	state.URL = track.ExternalURLs["spotify"]
+	state.URL = urls["spotify"]
 	return nil
 }
 
-func (state *PlayerState) setPreview(track *spotify.FullTrack) error {
-	state.Preview = track.PreviewURL
+func (state *PlayerState) setPreview(url string) error {
+	state.Preview = url
 	return nil
+}
+
+func (state *PlayerState) isNil() bool {
+	return state.Track == ""
 }
 
 func (state *PlayerState) GetFingerprint() (Fingerprint, error) {
