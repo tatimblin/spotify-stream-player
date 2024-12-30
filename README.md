@@ -21,18 +21,18 @@ I found Spotify to not have a great out of the box authentication solution for t
 
 Set the Redirect URI to: `http://localhost:3000`
 
-2. Get your Client ID:
+2. Get your CLIENT_ID and CLIENT_SECRET:
 
-On [spotify.com](https://open.spotify.com/) visit your profile and copy the ID from the address bar.
+From the Spotify dashboard visit the 'Settings' page. Under the 'Basic Information' tab note the 'Client ID'. Then, click 'Show client secret' and note the 'Client secret'. Save these somewhere they will be needed in later steps.
 
 3. Sign-in using a browser
 
 Visit the following page in your browser.
 ```
-https://accounts.spotify.com/authorize?client_id=<CLIENT_ID>&response_type=code&redirect_uri=http%3A%2F%2Flocalhost:3000&scope=user-read-currently-playing%20user-top-read
+https://accounts.spotify.com/authorize?client_id=<CLIENT_ID>&response_type=code&redirect_uri=http%3A%2F%2Flocalhost:3000&scope=user-read-currently-playing%20user-read-recently-played
 ```
 
-You should receieve a secret token
+You should receieve a secret token in the address param under the `code` query param.
 
 4. Encode your token
 

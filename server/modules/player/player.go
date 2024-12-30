@@ -37,15 +37,19 @@ func (player *Player) NowPlaying() (PlayerState, error) {
 		return playerState, err
 	}
 
-	if nowPlaying.Item == nil {
-		recentlyPlayed, err := player.getRecentlyPlayedTrack()
-		if err != nil {
-			return playerState, err
-		}
-		playerState.SetPlayerStateSimple(&recentlyPlayed)
-	} else {
+	if nowPlaying.Item != nil {
 		playerState.SetPlayerState(nowPlaying)
+
+		return playerState, nil
 	}
+
+	// No track playing, fallback to recently played
+
+	recentlyPlayed, err := player.getRecentlyPlayedTrack()
+	if err != nil {
+		return playerState, err
+	}
+	playerState.SetPlayerStateSimple(&recentlyPlayed)
 
 	return playerState, nil
 }

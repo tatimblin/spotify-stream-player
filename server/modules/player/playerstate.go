@@ -9,16 +9,17 @@ import (
 )
 
 type PlayerState struct {
-	Playing  bool      `json:"playing"`
 	Track    string    `json:"track"`
 	Album    string    `json:"album"`
-	Artists  string    `json:"artists"`
 	Cover    string    `json:"cover"`
+	Artists  string    `json:"artists"`
 	Progress int       `json:"progress"`
-	Duration int       `json:"duration"`
 	Preview  string    `json:"preview"`
 	URL      string    `json:"url"`
-	Cursor   time.Time `json:"time"`
+	Playing  bool      `json:"playing"`
+	Cursor   int       `json:"elapsed"`
+	Duration int       `json:"duration"`
+	Epoch    time.Time `json:"epoch"`
 	Destroy  bool      `json:"destroy"`
 }
 
@@ -28,49 +29,54 @@ type PlayerStateInterface interface {
 }
 
 func (state *PlayerState) SetPlayerState(currentlyPlaying *spotify.CurrentlyPlaying) {
-	state.setTrack(currentlyPlaying.Item.Name)
+	state.setTrackName(currentlyPlaying.Item.Name)
 	state.setAlbum(currentlyPlaying.Item.Album)
-	state.setCover(currentlyPlaying.Item.Album)
-	state.setArtist(currentlyPlaying.Item.Artists)
+	state.setArtists(currentlyPlaying.Item.Artists)
+
 	state.setPreview(currentlyPlaying.Item.PreviewURL)
-	state.setDuration(currentlyPlaying.Item.Duration)
 	state.setURL(currentlyPlaying.Item.ExternalURLs, currentlyPlaying.Item.ID, currentlyPlaying.Item.Album)
-	state.setPlaying(currentlyPlaying.Playing)
-	state.setProgressMS(currentlyPlaying.Progress, currentlyPlaying.Timestamp)
+
+	state.setPlayState(currentlyPlaying.Playing)
+	state.setProgress(currentlyPlaying.Progress, currentlyPlaying.Item.TimeDuration().Milliseconds())
+	state.setEpoch(time.UnixMilli(currentlyPlaying.Timestamp).UTC())
 }
 
 func (state *PlayerState) SetPlayerStateSimple(track *spotify.SimpleTrack) {
-	state.setTrack(track.Name)
-	state.setCover(track.Album)
-	state.setArtist(track.Artists)
+	state.setTrackName(track.Name)
+	state.setAlbum(track.Album)
+	state.setArtists(track.Artists)
+
 	state.setPreview(track.PreviewURL)
-	state.setDuration(track.Duration)
 	state.setURL(track.ExternalURLs, track.ID, track.Album)
-	state.setPlaying(false)
-	state.setProgressMS(track.Duration, time.Now().Unix())
+
+	state.setPlayState(false)
+	state.setProgress(track.Duration, track.TimeDuration().Milliseconds())
+	state.setEpoch(time.Now())
 }
 
-func (state *PlayerState) setTrack(name string) error {
+func (state *PlayerState) setTrackName(name string) error {
 	state.Track = name
 	return nil
 }
 
 func (state *PlayerState) setAlbum(album spotify.SimpleAlbum) error {
 	state.Album = album.Name
+	if albumCover, err := getAlbumCover(album); err == nil {
+		state.Cover = albumCover
+	}
 	return nil
 }
 
-func (state *PlayerState) setCover(album spotify.SimpleAlbum) error {
+func getAlbumCover(album spotify.SimpleAlbum) (string, error) {
 	if len(album.Images) == 0 {
-		return fmt.Errorf("no image for song")
+		return "", fmt.Errorf("no image for song")
 	}
 
 	lastImageIndex := len(album.Images) - 1
-	state.Cover = album.Images[lastImageIndex].URL
-	return nil
+	return album.Images[lastImageIndex].URL, nil
 }
 
-func (state *PlayerState) setArtist(artists []spotify.SimpleArtist) error {
+func (state *PlayerState) setArtists(artists []spotify.SimpleArtist) error {
 	var artistNames []string
 	for _, artist := range artists {
 		artistNames = append(artistNames, artist.Name)
@@ -79,21 +85,22 @@ func (state *PlayerState) setArtist(artists []spotify.SimpleArtist) error {
 	return nil
 }
 
-func (state *PlayerState) setPlaying(playing bool) error {
+func (state *PlayerState) setPlayState(playing bool) error {
 	state.Playing = playing
 
 	return nil
 }
 
-func (state *PlayerState) setProgressMS(progress int, timestamp int64) error {
-	state.Progress = progress
-	state.Cursor = time.UnixMilli(timestamp).UTC()
+func (state *PlayerState) setProgress(elapsed_ms int, total_ms int64) error {
+	state.Progress = elapsed_ms
+	state.Duration = int(total_ms)
 
 	return nil
 }
 
-func (state *PlayerState) setDuration(duration int) error {
-	state.Duration = duration
+func (state *PlayerState) setEpoch(epoch time.Time) error {
+	state.Epoch = epoch
+
 	return nil
 }
 
@@ -120,13 +127,13 @@ func (state *PlayerState) isNil() bool {
 }
 
 func (state *PlayerState) GetFingerprint() (Fingerprint, error) {
-	if state.URL == "" || state.Cursor.IsZero() {
+	if state.URL == "" || state.Cursor == 0 {
 		return Fingerprint{}, fmt.Errorf("incomplete data")
 	}
 
 	return Fingerprint{
 		uuid:         state.URL,
-		epoch:        state.Cursor,
+		epoch:        state.Epoch,
 		offset_epoch: time.Now(),
 	}, nil
 }
