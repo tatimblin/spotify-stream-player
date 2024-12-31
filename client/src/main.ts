@@ -21,8 +21,8 @@ declare global {
 interface Response {
   track: string,
   album: string,
-  artists: string,
   cover?: string,
+  artists: string,
   progress: number,
   duration: number,
   preview?: string,
@@ -70,6 +70,7 @@ export default class SpotifyPlayer extends HTMLElement {
 
     const evtSource = new EventSource(this.src);
     evtSource.onmessage = (event: MessageEvent) => {
+      console.log(event)
       const data = JSON.parse(event.data) as Response;
 
       this.#details.set({

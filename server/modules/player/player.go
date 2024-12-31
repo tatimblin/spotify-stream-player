@@ -38,7 +38,8 @@ func (player *Player) NowPlaying() (PlayerState, error) {
 	}
 
 	if nowPlaying.Item != nil {
-		playerState.SetPlayerState(nowPlaying)
+		playerState.SetPlayerStateCurrent(nowPlaying)
+		fmt.Println(playerState)
 
 		return playerState, nil
 	}
@@ -49,7 +50,7 @@ func (player *Player) NowPlaying() (PlayerState, error) {
 	if err != nil {
 		return playerState, err
 	}
-	playerState.SetPlayerStateSimple(&recentlyPlayed)
+	playerState.SetPlayerStateRecent(&recentlyPlayed)
 
 	return playerState, nil
 }

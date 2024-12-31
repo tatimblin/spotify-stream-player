@@ -14,12 +14,11 @@ type PlayerState struct {
 	Cover    string    `json:"cover"`
 	Artists  string    `json:"artists"`
 	Progress int       `json:"progress"`
+	Duration int       `json:"duration"`
 	Preview  string    `json:"preview"`
 	URL      string    `json:"url"`
 	Playing  bool      `json:"playing"`
-	Cursor   int       `json:"elapsed"`
-	Duration int       `json:"duration"`
-	Epoch    time.Time `json:"epoch"`
+	Epoch    time.Time `json:"time"`
 	Destroy  bool      `json:"destroy"`
 }
 
@@ -28,7 +27,7 @@ type PlayerStateInterface interface {
 	GetFingerprint() Fingerprint
 }
 
-func (state *PlayerState) SetPlayerState(currentlyPlaying *spotify.CurrentlyPlaying) {
+func (state *PlayerState) SetPlayerStateCurrent(currentlyPlaying *spotify.CurrentlyPlaying) {
 	state.setTrackName(currentlyPlaying.Item.Name)
 	state.setAlbum(currentlyPlaying.Item.Album)
 	state.setArtists(currentlyPlaying.Item.Artists)
@@ -41,7 +40,7 @@ func (state *PlayerState) SetPlayerState(currentlyPlaying *spotify.CurrentlyPlay
 	state.setEpoch(time.UnixMilli(currentlyPlaying.Timestamp).UTC())
 }
 
-func (state *PlayerState) SetPlayerStateSimple(track *spotify.SimpleTrack) {
+func (state *PlayerState) SetPlayerStateRecent(track *spotify.SimpleTrack) {
 	state.setTrackName(track.Name)
 	state.setAlbum(track.Album)
 	state.setArtists(track.Artists)
@@ -51,7 +50,7 @@ func (state *PlayerState) SetPlayerStateSimple(track *spotify.SimpleTrack) {
 
 	state.setPlayState(false)
 	state.setProgress(track.Duration, track.TimeDuration().Milliseconds())
-	state.setEpoch(time.Now())
+	state.setEpoch(time.Now().UTC())
 }
 
 func (state *PlayerState) setTrackName(name string) error {
@@ -123,11 +122,12 @@ func (state *PlayerState) setPreview(url string) error {
 }
 
 func (state *PlayerState) isNil() bool {
-	return state.Track == ""
+	return state.Epoch.IsZero() &&
+		state.Track == ""
 }
 
 func (state *PlayerState) GetFingerprint() (Fingerprint, error) {
-	if state.URL == "" || state.Cursor == 0 {
+	if state.isNil() {
 		return Fingerprint{}, fmt.Errorf("incomplete data")
 	}
 

@@ -60,8 +60,10 @@ func main() {
 			}
 
 			if !player.DetectStateChange(&state) {
+				// Skip; No change detected
 				continue
 			}
+
 			player.SetPreviousState(&state)
 
 			b, err := json.Marshal(state)
