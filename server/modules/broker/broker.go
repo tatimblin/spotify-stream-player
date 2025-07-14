@@ -78,8 +78,11 @@ func (broker *Broker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}()
 
 	for {
-		fmt.Fprintf(rw, "data: %s\n\n", <-messageChan)
-		flusher.Flush()
+		message := <-messageChan
+		if len(message) > 0 {
+			fmt.Fprintf(rw, "data: %s\n\n", message)
+			flusher.Flush()
+		}
 	}
 
 }
@@ -94,7 +97,10 @@ func (broker *Broker) listen() {
 			}
 		case s := <-broker.newClients:
 			broker.clients[s] = true
-			s <- broker.lastEvent
+			// Only send lastEvent if it's not empty
+			if len(broker.lastEvent) > 0 {
+				s <- broker.lastEvent
+			}
 			log.Printf("Client added. %d registered clients", len(broker.clients))
 			if len(broker.clients) > 0 {
 				broker.Listening = true

@@ -69,9 +69,32 @@ export default class SpotifyPlayer extends HTMLElement {
     }
 
     const evtSource = new EventSource(this.src);
+    
+    evtSource.onerror = (error) => {
+      console.error('EventSource error:', error);
+    };
+    
+    evtSource.onopen = () => {
+      console.log('EventSource connection opened');
+    };
+    
     evtSource.onmessage = (event: MessageEvent) => {
-      console.log(event)
-      const data = JSON.parse(event.data) as Response;
+      console.log('Raw event:', event);
+      console.log('Event data:', event.data);
+      
+      if (!event.data || event.data.trim() === '') {
+        console.warn('Received empty data from server');
+        return;
+      }
+      
+      let data: Response;
+      try {
+        data = JSON.parse(event.data) as Response;
+      } catch (error) {
+        console.error('Failed to parse JSON:', error);
+        console.error('Raw data:', event.data);
+        return;
+      }
 
       this.#details.set({
         track: data.track,
@@ -87,7 +110,15 @@ export default class SpotifyPlayer extends HTMLElement {
         isPlaying: data.playing,
       });
 
-      this.#start = new Date(data.time).getTime() - data.progress;
+      // Calculate start time accounting for network delay
+      const now = new Date().getTime();
+      const serverTime = new Date(data.time).getTime();
+      const networkDelay = Math.max(0, now - serverTime);
+      
+      // Adjust progress for network delay if reasonable (< 5 seconds)
+      const adjustedProgress = networkDelay < 5000 ? data.progress + networkDelay : data.progress;
+      
+      this.#start = now - adjustedProgress;
       this.#playing = data.playing;
       this.#duration = data.duration;
 
@@ -101,16 +132,17 @@ export default class SpotifyPlayer extends HTMLElement {
   get #timer() {
     return () => {
       const now = new Date().getTime();
-      const progress = now - this.#start;
+      const progress = Math.max(0, now - this.#start);
 
       if (progress > this.#duration) {
         this.#clearTimer();
+        return;
       }
 
-      const percent = (progress / this.#duration) * 100;
+      const percent = Math.min(100, (progress / this.#duration) * 100);
       if (window.progress) {
         window.progress.value = percent;
-        window.progress.innerText = `${percent}%`;
+        window.progress.innerText = `${percent.toFixed(1)}%`;
       }
 
       if (window.time) {
@@ -118,7 +150,7 @@ export default class SpotifyPlayer extends HTMLElement {
       }
 
       if (this.#playing && percent < 100) {
-        window.requestAnimationFrame(this.#timer);
+        this.#animationID = window.requestAnimationFrame(this.#timer);
       }
     }
   }

@@ -53,24 +53,28 @@ func main() {
 				continue
 			}
 
-			state, err = player.NowPlaying()
+			newState, err := player.NowPlaying()
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
 				continue
 			}
 
-			if !player.DetectStateChange(&state) {
+			if !player.DetectStateChange(&newState) {
 				// Skip; No change detected
 				continue
 			}
 
+			// Update state reference
+			state = newState
 			player.SetPreviousState(&state)
 
 			b, err := json.Marshal(state)
 			if err != nil {
-				fmt.Printf("Error: %s\n", err)
+				fmt.Printf("Error marshaling state: %s\n", err)
 				continue
 			}
+			
+			fmt.Printf("Sending state update: %s\n", string(b))
 			broker.Notify(b)
 		}
 	}()

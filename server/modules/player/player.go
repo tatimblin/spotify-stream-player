@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -67,16 +68,15 @@ func (player *Player) DetectStateChange(playerState *PlayerState) bool {
 		return true
 	}
 
-	isStateChange := player.fingerprint.epoch.Sub(newState.epoch) != 0
-
-	// offset := time.Since(player.fingerprint.offset_epoch)
-	// playerState.Cursor = playerState.Cursor.Add(offset)
-
-	if isStateChange {
+	// Track changed
+	if player.fingerprint.uuid != newState.uuid {
 		return true
 	}
 
-	if player.fingerprint.uuid != newState.uuid {
+	// For the same track, send updates if playing to keep timestamps accurate
+	// or if there's a significant time gap (more than 10 seconds)
+	timeDiff := newState.epoch.Sub(player.fingerprint.epoch)
+	if playerState.Playing || timeDiff > 10*time.Second || timeDiff < -5*time.Second {
 		return true
 	}
 
