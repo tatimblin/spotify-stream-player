@@ -38,6 +38,9 @@ export default class SpotifyPlayer extends HTMLElement {
   #start = 0;
   #duration = 0;
   #animationID?: number;
+  #eventSource?: EventSource;
+  #idleTimeout?: number;
+  #idleTimeoutDuration = 30 * 60 * 1000; // 30 minutes
 
   observedAttributes = ["src"];
 
@@ -52,6 +55,12 @@ export default class SpotifyPlayer extends HTMLElement {
 
   connectedCallback() {
     this.#subscribe();
+    this.#setupVisibilityHandling();
+    this.#startIdleTimer();
+  }
+
+  disconnectedCallback() {
+    this.#cleanup();
   }
 
   render(...components: Reactive<any>[]) {
@@ -68,19 +77,16 @@ export default class SpotifyPlayer extends HTMLElement {
       return;
     }
 
-    const evtSource = new EventSource(this.src);
+    this.#cleanup();
+
+    this.#eventSource = new EventSource(this.src);
     
-    evtSource.onerror = (error) => {
+    this.#eventSource.onerror = (error) => {
       console.error('EventSource error:', error);
     };
     
-    evtSource.onopen = () => {
-      console.log('EventSource connection opened');
-    };
-    
-    evtSource.onmessage = (event: MessageEvent) => {
-      console.log('Raw event:', event);
-      console.log('Event data:', event.data);
+    this.#eventSource.onmessage = (event: MessageEvent) => {
+      this.#resetIdleTimer();
       
       if (!event.data || event.data.trim() === '') {
         console.warn('Received empty data from server');
@@ -153,6 +159,45 @@ export default class SpotifyPlayer extends HTMLElement {
         this.#animationID = window.requestAnimationFrame(this.#timer);
       }
     }
+  }
+
+  #setupVisibilityHandling() {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        this.#cleanup();
+      } else {
+        this.#subscribe();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+  }
+
+  #startIdleTimer() {
+    this.#idleTimeout = window.setTimeout(() => {
+      this.#cleanup();
+    }, this.#idleTimeoutDuration);
+  }
+
+  #resetIdleTimer() {
+    if (this.#idleTimeout) {
+      window.clearTimeout(this.#idleTimeout);
+    }
+    this.#startIdleTimer();
+  }
+
+  #cleanup() {
+    if (this.#eventSource) {
+      this.#eventSource.close();
+      this.#eventSource = undefined;
+    }
+    
+    if (this.#idleTimeout) {
+      window.clearTimeout(this.#idleTimeout);
+      this.#idleTimeout = undefined;
+    }
+    
+    this.#clearTimer();
   }
 
   #clearTimer() {
