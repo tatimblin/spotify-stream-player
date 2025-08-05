@@ -53,11 +53,11 @@ export default class SpotifyPlayer extends HTMLElement {
     this.#details = new Reactive<TrackInterface>("details", null, Details);
     this.#progress = new Reactive<ProgressInterface>("progress", null, Progress);
 
-    this.render(this.#details, this.#progress);
+    this.#renderSkeleton();
   }
 
   connectedCallback() {
-    this.render(this.#details, this.#progress);
+    this.#renderSkeleton();
     this.#subscribe();
     this.#setupVisibilityHandling();
     this.#startIdleTimer();
@@ -70,6 +70,15 @@ export default class SpotifyPlayer extends HTMLElement {
   render(...components: Reactive<any>[]) {
     if (this.#hasReceivedData) {
       this.#renderContent(...components);
+      setTimeout(() => {
+        components.forEach(component => {
+          try {
+            component.render();
+          } catch (error) {
+            console.warn('Component render failed:', error);
+          }
+        });
+      }, 0);
     } else {
       this.#renderSkeleton();
     }
@@ -196,7 +205,7 @@ export default class SpotifyPlayer extends HTMLElement {
       if (document.hidden) {
         this.#cleanup();
       } else {
-        this.render(this.#details, this.#progress);
+        this.#renderSkeleton();
         this.#subscribe();
       }
     };
@@ -230,7 +239,7 @@ export default class SpotifyPlayer extends HTMLElement {
     
     this.#hasReceivedData = false;
     this.#clearTimer();
-    this.render(this.#details, this.#progress);
+    this.#renderSkeleton();
   }
 
   #clearTimer() {

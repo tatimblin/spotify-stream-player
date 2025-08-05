@@ -7,10 +7,10 @@ export interface SkeletonDetailsInterface {
 export default function SkeletonDetails(): string {
   return `
     <div class="${classes.details} ${classes.skeleton}">
-      <div class="${classes.album}"></div>
+      <div class="${classes.album}">&nbsp;</div>
       <div class="${classes.details_text}">
-        <div class="${classes.head}"></div>
-        <div class="${classes.rib}"></div>
+        <div class="${classes.head}">&nbsp;</div>
+        <div class="${classes.rib}">&nbsp;</div>
       </div>
     </div>
   `;
