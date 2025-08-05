@@ -16,7 +16,8 @@
   min-width: 0;
 }
 
-.head, .rib {
+.head,
+.rib {
   margin: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -29,4 +30,40 @@
 
 .rib {
   font-size: 0.9em;
+}
+
+/* Skeleton loading styles */
+.skeleton .album {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton_loading 1.5s infinite;
+}
+
+.skeleton .head {
+  height: 1.2em;
+  width: 70%;
+  margin-bottom: 4px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton_loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton .rib {
+  height: 1em;
+  width: 50%;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton_loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes skeleton_loading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }

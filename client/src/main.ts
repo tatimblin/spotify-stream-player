@@ -3,6 +3,8 @@ import Details from "./details";
 import type { TrackInterface } from "./details";
 import Progress from "./progress";
 import type { ProgressInterface } from "./progress";
+import SkeletonDetails from "./skeleton-details";
+import SkeletonProgress from "./skeleton-progress";
 
 interface EventResponse extends Event {
   data: Response,
@@ -34,6 +36,7 @@ interface Response {
 export default class SpotifyPlayer extends HTMLElement {
   #details: Reactive<TrackInterface>;
   #progress: Reactive<ProgressInterface>;
+  #hasReceivedData: boolean = false;
   #playing: boolean = false;
   #start = 0;
   #duration = 0;
@@ -54,6 +57,7 @@ export default class SpotifyPlayer extends HTMLElement {
   }
 
   connectedCallback() {
+    this.render(this.#details, this.#progress);
     this.#subscribe();
     this.#setupVisibilityHandling();
     this.#startIdleTimer();
@@ -64,11 +68,30 @@ export default class SpotifyPlayer extends HTMLElement {
   }
 
   render(...components: Reactive<any>[]) {
+    if (this.#hasReceivedData) {
+      this.#renderContent(...components);
+    } else {
+      this.#renderSkeleton();
+    }
+  }
+
+  #renderContent(...components: Reactive<any>[]) {
     const [Details, Progress] = components;
 
     this.innerHTML = `
-      ${Details.create()}
-      ${Progress.create()}
+      <div class="content-transition">
+        ${Details.create()}
+        ${Progress.create()}
+      </div>
+    `;
+  }
+
+  #renderSkeleton() {
+    this.innerHTML = `
+      <div class="content-transition">
+        ${SkeletonDetails()}
+        ${SkeletonProgress()}
+      </div>
     `;
   }
 
@@ -100,6 +123,13 @@ export default class SpotifyPlayer extends HTMLElement {
         console.error('Failed to parse JSON:', error);
         console.error('Raw data:', event.data);
         return;
+      }
+
+      if (!this.#hasReceivedData) {
+        this.#hasReceivedData = true;
+        setTimeout(() => {
+          this.render(this.#details, this.#progress);
+        }, 50);
       }
 
       this.#details.set({
@@ -166,6 +196,7 @@ export default class SpotifyPlayer extends HTMLElement {
       if (document.hidden) {
         this.#cleanup();
       } else {
+        this.render(this.#details, this.#progress);
         this.#subscribe();
       }
     };
@@ -197,7 +228,9 @@ export default class SpotifyPlayer extends HTMLElement {
       this.#idleTimeout = undefined;
     }
     
+    this.#hasReceivedData = false;
     this.#clearTimer();
+    this.render(this.#details, this.#progress);
   }
 
   #clearTimer() {

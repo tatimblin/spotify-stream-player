@@ -35,3 +35,24 @@
   font-size: 0.7em;
   font-variant-numeric: tabular-nums;
 }
+
+/* Skeleton loading styles */
+.skeleton .progress_bar {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton_loading 1.5s infinite;
+}
+
+.skeleton .progress_timestamp {
+  height: 0.7em;
+  width: 2.5em;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton_loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes skeleton_loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

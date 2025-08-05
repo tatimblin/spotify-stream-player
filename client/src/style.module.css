@@ -18,3 +18,19 @@
 .details_rib {
   font-size: 0.9em;
 }
+
+/* Base skeleton loading styles */
+@keyframes skeleton_loading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Smooth transition between skeleton and content */
+.content-transition {
+  transition: opacity 0.3s ease-in-out;
+}
