@@ -8,6 +8,7 @@
 .album {
   width: 4em;
   height: 4em;
+  aspect-ratio: 1 / 1;
   border-radius: 3px;
 }
 
