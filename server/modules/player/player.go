@@ -9,9 +9,10 @@ import (
 )
 
 type Player struct {
-	client      *spotify.Client
-	ctx         context.Context
-	fingerprint Fingerprint
+	client          *spotify.Client
+	ctx             context.Context
+	fingerprint     Fingerprint
+	previousPlaying bool
 }
 
 func NewPlayer() *Player {
@@ -40,8 +41,6 @@ func (player *Player) NowPlaying() (PlayerState, error) {
 
 	if nowPlaying.Item != nil {
 		playerState.SetPlayerStateCurrent(nowPlaying)
-		fmt.Println(playerState)
-
 		return playerState, nil
 	}
 
@@ -65,21 +64,38 @@ func (player *Player) DetectStateChange(playerState *PlayerState) bool {
 
 	// Initial state
 	if player.fingerprint.IsZero() || newState.epoch.IsZero() {
+		fmt.Println("State change detected: Initial state")
 		return true
 	}
 
 	// Track changed
 	if player.fingerprint.uuid != newState.uuid {
+		fmt.Println("State change detected: Track changed")
 		return true
 	}
 
-	// For the same track, send updates if playing to keep timestamps accurate
-	// or if there's a significant time gap (more than 10 seconds)
-	timeDiff := newState.epoch.Sub(player.fingerprint.epoch)
-	if playerState.Playing || timeDiff > 10*time.Second || timeDiff < -5*time.Second {
+	// Check for play/pause state changes
+	previousState := player.getPreviousPlayingState()
+	if previousState != playerState.Playing {
+		if playerState.Playing {
+			fmt.Println("State change detected: Resumed playing")
+		} else {
+			fmt.Println("State change detected: Paused")
+		}
 		return true
 	}
 
+	// For scrubbing detection - compare expected end times
+	// If the expected end time changed significantly, it means the user scrubbed
+	endTimeDiff := newState.expectedEndTime.Sub(player.fingerprint.expectedEndTime)
+
+	// Significant change in expected end time (more than 10 seconds) indicates scrubbing
+	if endTimeDiff > 10*time.Second || endTimeDiff < -5*time.Second {
+		fmt.Printf("State change detected: Scrubbed (end time changed by: %v)\n", endTimeDiff)
+		return true
+	}
+
+	// No significant change detected
 	return false
 }
 
@@ -91,6 +107,12 @@ func (player *Player) SetPreviousState(playerState *PlayerState) {
 		return
 	}
 	player.fingerprint = fingerprint
+	player.previousPlaying = playerState.Playing
+}
+
+// Get the previous playing state
+func (player *Player) getPreviousPlayingState() bool {
+	return player.previousPlaying
 }
 
 func (player *Player) getRecentlyPlayedTrack() (spotify.SimpleTrack, error) {

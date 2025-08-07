@@ -3,9 +3,9 @@ package player
 import "time"
 
 type Fingerprint struct {
-	uuid         string
-	epoch        time.Time
-	offset_epoch time.Time
+	uuid            string
+	epoch           time.Time
+	expectedEndTime time.Time
 }
 
 type FingerprintInterface interface {

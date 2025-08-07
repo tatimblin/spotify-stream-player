@@ -132,9 +132,13 @@ func (state *PlayerState) GetFingerprint() (Fingerprint, error) {
 		return Fingerprint{}, fmt.Errorf("incomplete data")
 	}
 
+	// Calculate expected end time: current time + remaining duration
+	remainingMs := state.Duration - state.Progress
+	expectedEndTime := time.Now().Add(time.Duration(remainingMs) * time.Millisecond)
+
 	return Fingerprint{
-		uuid:         state.URL,
-		epoch:        state.Epoch,
-		offset_epoch: time.Now(),
+		uuid:            state.URL,
+		epoch:           state.Epoch,
+		expectedEndTime: expectedEndTime,
 	}, nil
 }

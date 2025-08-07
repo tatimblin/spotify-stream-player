@@ -73,7 +73,7 @@ func main() {
 				fmt.Printf("Error marshaling state: %s\n", err)
 				continue
 			}
-			
+
 			fmt.Printf("Sending state update: %s\n", string(b))
 			broker.Notify(b)
 		}
