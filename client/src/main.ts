@@ -70,7 +70,7 @@ export default class SpotifyPlayer extends HTMLElement {
   render(...components: Reactive<any>[]) {
     if (this.#hasReceivedData) {
       this.#renderContent(...components);
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         components.forEach(component => {
           try {
             component.render();
@@ -78,7 +78,7 @@ export default class SpotifyPlayer extends HTMLElement {
             console.warn('Component render failed:', error);
           }
         });
-      }, 0);
+      });
     } else {
       this.#renderSkeleton();
     }
@@ -112,19 +112,19 @@ export default class SpotifyPlayer extends HTMLElement {
     this.#cleanup();
 
     this.#eventSource = new EventSource(this.src);
-    
+
     this.#eventSource.onerror = (error) => {
       console.error('EventSource error:', error);
     };
-    
+
     this.#eventSource.onmessage = (event: MessageEvent) => {
       this.#resetIdleTimer();
-      
+
       if (!event.data || event.data.trim() === '') {
         console.warn('Received empty data from server');
         return;
       }
-      
+
       let data: Response;
       try {
         data = JSON.parse(event.data) as Response;
@@ -136,9 +136,7 @@ export default class SpotifyPlayer extends HTMLElement {
 
       if (!this.#hasReceivedData) {
         this.#hasReceivedData = true;
-        setTimeout(() => {
-          this.render(this.#details, this.#progress);
-        }, 50);
+        this.render(this.#details, this.#progress);
       }
 
       this.#details.set({
@@ -155,15 +153,9 @@ export default class SpotifyPlayer extends HTMLElement {
         isPlaying: data.playing,
       });
 
-      // Calculate start time accounting for network delay
       const now = new Date().getTime();
-      const serverTime = new Date(data.time).getTime();
-      const networkDelay = Math.max(0, now - serverTime);
-      
-      // Adjust progress for network delay if reasonable (< 5 seconds)
-      const adjustedProgress = networkDelay < 5000 ? data.progress + networkDelay : data.progress;
-      
-      this.#start = now - adjustedProgress;
+
+      this.#start = now - data.progress;
       this.#playing = data.playing;
       this.#duration = data.duration;
 
@@ -205,6 +197,7 @@ export default class SpotifyPlayer extends HTMLElement {
       if (document.hidden) {
         this.#cleanup();
       } else {
+        this.#hasReceivedData = false;
         this.#renderSkeleton();
         this.#subscribe();
       }
@@ -231,12 +224,12 @@ export default class SpotifyPlayer extends HTMLElement {
       this.#eventSource.close();
       this.#eventSource = undefined;
     }
-    
+
     if (this.#idleTimeout) {
       window.clearTimeout(this.#idleTimeout);
       this.#idleTimeout = undefined;
     }
-    
+
     this.#hasReceivedData = false;
     this.#clearTimer();
     this.#renderSkeleton();

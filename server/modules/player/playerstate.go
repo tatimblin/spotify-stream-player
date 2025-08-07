@@ -36,19 +36,9 @@ func (state *PlayerState) SetPlayerStateCurrent(currentlyPlaying *spotify.Curren
 	state.setURL(currentlyPlaying.Item.ExternalURLs, currentlyPlaying.Item.ID, currentlyPlaying.Item.Album)
 
 	state.setPlayState(currentlyPlaying.Playing)
-	
-	// Calculate adjusted progress to account for time elapsed since Spotify's timestamp
-	spotifyTimestamp := time.UnixMilli(currentlyPlaying.Timestamp).UTC()
-	timeSinceUpdate := time.Since(spotifyTimestamp)
-	adjustedProgress := currentlyPlaying.Progress
-	
-	// Only adjust if playing and the time difference is reasonable (< 30 seconds)
-	if currentlyPlaying.Playing && timeSinceUpdate > 0 && timeSinceUpdate < 30*time.Second {
-		adjustedProgress += int(timeSinceUpdate.Milliseconds())
-	}
-	
-	state.setProgress(adjustedProgress, currentlyPlaying.Item.TimeDuration().Milliseconds())
-	state.setEpoch(time.Now().UTC()) // Use current time instead of Spotify's timestamp
+
+	state.setProgress(currentlyPlaying.Progress, currentlyPlaying.Item.TimeDuration().Milliseconds())
+	state.setEpoch(time.UnixMilli(currentlyPlaying.Timestamp).UTC()) // Use Spotify's original timestamp
 }
 
 func (state *PlayerState) SetPlayerStateRecent(track *spotify.SimpleTrack) {

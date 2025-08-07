@@ -1,6 +1,5 @@
 export default class Reactive<T> {
   #data: Partial<T>;
-  #element?: Element;
   #name: string;
   #template: (props: Partial<T>, set?: ((data: Partial<T>) => void) | undefined) => string;
   #rendering: boolean = false;
@@ -16,10 +15,6 @@ export default class Reactive<T> {
   }
 
   #getElement(): Element {
-    if (this.#element) {
-      return this.#element;
-    }
-
     const element = document.querySelector(`.${this.#name}`);
     if (!element) {
       throw Error("element not found");
@@ -37,7 +32,7 @@ export default class Reactive<T> {
     }
 
     if (typeof data === 'object') {
-      this.#data = {...this.#data, ...data};
+      this.#data = { ...this.#data, ...data };
     } else {
       this.#data = data;
     }
@@ -55,8 +50,13 @@ export default class Reactive<T> {
       return;
     }
 
-    // todo: rerenders from calling set should not call set again
-    this.#getElement().innerHTML = this.#template(this.#data, this.set.bind(this));
+    try {
+      // todo: rerenders from calling set should not call set again
+      this.#getElement().innerHTML = this.#template(this.#data, this.set.bind(this));
+    } catch (error) {
+      // Element might not exist yet, skip this render
+      console.warn(`Failed to render ${this.#name}:`, error);
+    }
   }
 
   create() {
