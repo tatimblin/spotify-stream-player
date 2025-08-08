@@ -9,17 +9,18 @@ import (
 )
 
 type PlayerState struct {
-	Track    string    `json:"track"`
-	Album    string    `json:"album"`
-	Cover    string    `json:"cover"`
-	Artists  string    `json:"artists"`
-	Progress int       `json:"progress"`
-	Duration int       `json:"duration"`
-	Preview  string    `json:"preview"`
-	URL      string    `json:"url"`
-	Playing  bool      `json:"playing"`
-	Epoch    time.Time `json:"time"`
-	Destroy  bool      `json:"destroy"`
+	Track     string    `json:"track"`
+	Album     string    `json:"album"`
+	Cover     string    `json:"cover"`
+	Artists   string    `json:"artists"`
+	ArtistURL string    `json:"artistUrl"`
+	Progress  int       `json:"progress"`
+	Duration  int       `json:"duration"`
+	Preview   string    `json:"preview"`
+	URL       string    `json:"url"`
+	Playing   bool      `json:"playing"`
+	Epoch     time.Time `json:"time"`
+	Destroy   bool      `json:"destroy"`
 }
 
 type PlayerStateInterface interface {
@@ -31,6 +32,7 @@ func (state *PlayerState) SetPlayerStateCurrent(currentlyPlaying *spotify.Curren
 	state.setTrackName(currentlyPlaying.Item.Name)
 	state.setAlbum(currentlyPlaying.Item.Album)
 	state.setArtists(currentlyPlaying.Item.Artists)
+	state.setArtistURL(currentlyPlaying.Item.Artists)
 
 	state.setPreview(currentlyPlaying.Item.PreviewURL)
 	state.setURL(currentlyPlaying.Item.ExternalURLs, currentlyPlaying.Item.ID, currentlyPlaying.Item.Album)
@@ -45,6 +47,7 @@ func (state *PlayerState) SetPlayerStateRecent(track *spotify.SimpleTrack) {
 	state.setTrackName(track.Name)
 	state.setAlbum(track.Album)
 	state.setArtists(track.Artists)
+	state.setArtistURL(track.Artists)
 
 	state.setPreview(track.PreviewURL)
 	state.setURL(track.ExternalURLs, track.ID, track.Album)
@@ -82,6 +85,21 @@ func (state *PlayerState) setArtists(artists []spotify.SimpleArtist) error {
 		artistNames = append(artistNames, artist.Name)
 	}
 	state.Artists = strings.Join(artistNames, ", ")
+	return nil
+}
+
+func (state *PlayerState) setArtistURL(artists []spotify.SimpleArtist) error {
+	if len(artists) == 0 {
+		state.ArtistURL = ""
+		return nil
+	}
+
+	// Use the first artist's Spotify URL
+	if url, ok := artists[0].ExternalURLs["spotify"]; ok {
+		state.ArtistURL = url
+	} else {
+		state.ArtistURL = ""
+	}
 	return nil
 }
 
