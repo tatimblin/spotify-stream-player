@@ -22,12 +22,14 @@ declare global {
 
 interface Response {
   track: string,
+  url: string,
   album: string,
+  albumUrl: string,
   cover?: string,
   artists: string,
+  artistUrl: string,
   progress: number,
   duration: number,
-  preview?: string,
   playing: boolean,
   time: string,
   destroy: boolean,
@@ -141,10 +143,12 @@ export default class SpotifyPlayer extends HTMLElement {
 
       this.#details.set({
         track: data.track,
+        url: data.url,
         album: data.album,
+        albumUrl: data.albumUrl,
         artists: data.artists,
+        artistUrl: data.artistUrl,
         cover: data.cover,
-        preview: data.preview,
       });
 
       this.#progress.set({
