@@ -11,6 +11,7 @@ import (
 type PlayerState struct {
 	Track     string    `json:"track"`
 	Album     string    `json:"album"`
+	AlbumURL  string    `json:"albumUrl"`
 	Cover     string    `json:"cover"`
 	Artists   string    `json:"artists"`
 	ArtistURL string    `json:"artistUrl"`
@@ -31,6 +32,7 @@ type PlayerStateInterface interface {
 func (state *PlayerState) SetPlayerStateCurrent(currentlyPlaying *spotify.CurrentlyPlaying) {
 	state.setTrackName(currentlyPlaying.Item.Name)
 	state.setAlbum(currentlyPlaying.Item.Album)
+	state.setAlbumURL(currentlyPlaying.Item.Album)
 	state.setArtists(currentlyPlaying.Item.Artists)
 	state.setArtistURL(currentlyPlaying.Item.Artists)
 
@@ -99,6 +101,15 @@ func (state *PlayerState) setArtistURL(artists []spotify.SimpleArtist) error {
 		state.ArtistURL = url
 	} else {
 		state.ArtistURL = ""
+	}
+	return nil
+}
+
+func (state *PlayerState) setAlbumURL(album spotify.SimpleAlbum) error {
+	if url, ok := album.ExternalURLs["spotify"]; ok {
+		state.AlbumURL = url
+	} else {
+		state.AlbumURL = ""
 	}
 	return nil
 }
