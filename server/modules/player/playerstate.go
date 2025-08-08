@@ -17,7 +17,6 @@ type PlayerState struct {
 	ArtistURL string    `json:"artistUrl"`
 	Progress  int       `json:"progress"`
 	Duration  int       `json:"duration"`
-	Preview   string    `json:"preview"`
 	URL       string    `json:"url"`
 	Playing   bool      `json:"playing"`
 	Epoch     time.Time `json:"time"`
@@ -35,8 +34,6 @@ func (state *PlayerState) SetPlayerStateCurrent(currentlyPlaying *spotify.Curren
 	state.setAlbumURL(currentlyPlaying.Item.Album)
 	state.setArtists(currentlyPlaying.Item.Artists)
 	state.setArtistURL(currentlyPlaying.Item.Artists)
-
-	state.setPreview(currentlyPlaying.Item.PreviewURL)
 	state.setURL(currentlyPlaying.Item.ExternalURLs, currentlyPlaying.Item.ID, currentlyPlaying.Item.Album)
 
 	state.setPlayState(currentlyPlaying.Playing)
@@ -48,10 +45,10 @@ func (state *PlayerState) SetPlayerStateCurrent(currentlyPlaying *spotify.Curren
 func (state *PlayerState) SetPlayerStateRecent(track *spotify.SimpleTrack) {
 	state.setTrackName(track.Name)
 	state.setAlbum(track.Album)
+	state.setAlbumURL(track.Album)
 	state.setArtists(track.Artists)
 	state.setArtistURL(track.Artists)
 
-	state.setPreview(track.PreviewURL)
 	state.setURL(track.ExternalURLs, track.ID, track.Album)
 
 	state.setPlayState(false)
@@ -143,11 +140,6 @@ func (state *PlayerState) setURL(urls map[string]string, id spotify.ID, album sp
 	}
 
 	state.URL = urls["spotify"]
-	return nil
-}
-
-func (state *PlayerState) setPreview(url string) error {
-	state.Preview = url
 	return nil
 }
 
