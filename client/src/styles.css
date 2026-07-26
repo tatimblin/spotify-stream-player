@@ -241,7 +241,10 @@
 }
 
 /* ---- skeleton (theme-aware shimmer) ------------------------------------- */
-.skeleton .album,
+/* The shimmer lives on `.art` (the square), NOT the `.album` frame — in cover
+   layout the frame is full-width, so shimmering it would fill the whole width
+   instead of matching the square box the real art occupies. */
+.skeleton .art,
 .skeleton .title,
 .skeleton .artist,
 .skeleton .album-text,
