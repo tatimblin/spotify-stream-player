@@ -9,7 +9,7 @@
   ],
   "license": "ISC",
   "private": false,
-  "version": "0.3.1",
+  "version": "0.4.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tatimblin/spotify-stream-player.git"
@@ -27,8 +27,7 @@
   },
   "files": [
     "./dist/index.cjs.js",
-    "./dist/index.es.js",
-    "./dist/style.css"
+    "./dist/index.es.js"
   ],
   "type": "module",
   "scripts": {

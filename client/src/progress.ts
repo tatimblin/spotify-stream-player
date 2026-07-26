@@ -1,5 +1,4 @@
 import Timestamp from "./timestamp";
-import classes from "./progress.module.css";
 
 export interface ProgressInterface {
   progress: number,
@@ -7,28 +6,27 @@ export interface ProgressInterface {
   isPlaying: boolean,
 }
 
-export default function(props: Partial<ProgressInterface>) {
+export default function (props: Partial<ProgressInterface>) {
   if (!props.duration || !props.progress) {
     return ``;
-  }  
+  }
 
   return `
-    <div class="${classes.progress}">
+    <div class="progress" part="progress">
       ${Timestamp({
-        className: classes.progress_timestamp,
         milliseconds: props.progress,
         active: true,
       })}
       <progress
-        id="progress"
-        class="${classes.progress_bar}"
+        id="ssp-progress"
+        class="progress-bar"
+        part="progress-bar"
         value="${(props.progress / props.duration) * 100}"
         max="${100}"
       >
           ${getPercent(props.progress, props.duration)}%
       </progress>
       ${Timestamp({
-        className: classes.progress_timestamp,
         milliseconds: props.duration,
       })}
     </div>

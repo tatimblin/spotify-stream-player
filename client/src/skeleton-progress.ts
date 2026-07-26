@@ -1,19 +1,14 @@
-import classes from "./progress.module.css";
-
-export interface SkeletonProgressInterface {
-  // No props needed - static skeleton display
-}
-
 export default function SkeletonProgress(): string {
   return `
-    <div class="${classes.progress} ${classes.skeleton}">
-      <span class="${classes.progress_timestamp}"></span>
+    <div class="progress skeleton" part="progress">
+      <span class="timestamp" part="elapsed"></span>
       <progress
-        class="${classes.progress_bar}"
+        class="progress-bar"
+        part="progress-bar"
         value="0"
         max="100"
       ></progress>
-      <span class="${classes.progress_timestamp}"></span>
+      <span class="timestamp" part="remaining"></span>
     </div>
   `;
 }

@@ -4,12 +4,50 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
+    <title>spotify-stream-player — layouts</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        gap: 32px;
+        align-items: flex-start;
+        padding: 40px;
+        background: #1a1a1a;
+        color: #e8e8e8;
+        font-family: system-ui, sans-serif;
+      }
+      .demo { display: flex; flex-direction: column; gap: 8px; }
+      .demo h2 { margin: 0; font-size: 13px; font-weight: 600; color: #888; }
+      .card {
+        border: 1px dashed #555;
+        border-radius: 12px;
+        padding: 16px;
+        background: #222;
+      }
+      .card--row { width: 200px; }
+      .card--cover { width: 320px; }
+      /* Same element, tuned per-card via the public API. */
+      spotify-player { --ssp-accent: #7ab88a; }
+    </style>
   </head>
   <body>
-    <div id="app">
-      <spotify-player src="http://localhost:8080/" />
+    <!-- Both players are the SAME element with the SAME rendered markup; only the
+         `layout` attribute (and thus CSS) differs. -->
+    <div class="demo">
+      <h2>layout="row" (compact thumbnail)</h2>
+      <div class="card card--row">
+        <spotify-player src="mock://demo" layout="row"></spotify-player>
+      </div>
     </div>
+
+    <div class="demo">
+      <h2>layout="cover" (art-forward / Apple Music)</h2>
+      <div class="card card--cover">
+        <spotify-player src="mock://demo" layout="cover"></spotify-player>
+      </div>
+    </div>
+
     <script type="module" src="/demo.ts"></script>
   </body>
 </html>

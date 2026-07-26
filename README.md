@@ -71,15 +71,67 @@ The client can be installed from npm `npm i @tristimb/spotify-stream-player` or 
 
 #### Usage
 
-Import the package or build you just installed and register the Custom Element. Then, reference it in your HTML.
+Import the package (it self-registers the `<spotify-player>` element):
 
 ##### js
 ```
-import SpotifyPlayer from "@tristimb/spotify-stream-player";
-import "@tristimb/spotify-stream-player/dist/style.css";
-
-customElements.define("spotify-player", SpotifyPlayer);
+import "@tristimb/spotify-stream-player";
 ```
+
+Need the class (e.g. to register under a different tag name)? It's still the
+default export:
+```
+import SpotifyPlayer from "@tristimb/spotify-stream-player";
+customElements.define("my-player", SpotifyPlayer);
+```
+
+##### Styling
+
+The component uses Shadow DOM and exposes a styling API via `::part()` selectors
+and CSS custom properties. No external stylesheet import is needed — styles are
+injected automatically and the player inherits your theme colors by default:
+
+```css
+/* Size the player and set theme colors via custom properties */
+spotify-player {
+  --ssp-accent: #1db954;           /* progress fill color */
+  --ssp-radius: 8px;               /* border radius */
+  --ssp-gap: 12px;                 /* spacing */
+}
+
+/* Style individual parts */
+spotify-player::part(album) { border-radius: var(--ssp-radius); }
+spotify-player::part(title) { font-size: 1.1em; font-weight: 700; }
+spotify-player::part(artist) { opacity: 0.8; }
+```
+
+**Available parts:** `root`, `details`, `album` (art frame), `art` (image), 
+`title`, `artist`, `album-text`, `progress`, `progress-bar`, `elapsed`, `remaining`.
+
+**Custom properties:** `--ssp-accent` (progress fill), `--ssp-album-size`, 
+`--ssp-gap`, `--ssp-radius`, `--ssp-title-size`, `--ssp-subtitle-size`, 
+`--ssp-timestamp-size`, `--ssp-skeleton` (loading state tint), and more.
+
+##### Layout
+
+The `layout` attribute selects a built-in arrangement:
+
+- `layout="row"` (default) — compact: small album thumbnail on the left, track
+  info on the right, progress below.
+- `layout="cover"` — art-forward (Apple Music style): a full-width square album
+  cover on top, then title, artist, and progress stacked beneath it.
+
+```html
+<spotify-player src="http://localhost:8080/" layout="cover"></spotify-player>
+```
+
+Both layouts render from the same markup — only CSS differs. Because every piece
+is an addressable `::part()`, you can also build a fully custom arrangement by
+rearranging the parts with grid/flex from your own stylesheet (the bar and both
+timestamps are flat siblings inside `progress`, so e.g. a bar-on-top with
+timestamps at the ends below is pure CSS). Native `<progress>` is display-only
+(no custom thumb/seek), and you can restyle or reorder the exposed parts but not
+add new elements or change the nesting.
 
 ##### html
 ```
@@ -90,7 +142,7 @@ customElements.define("spotify-player", SpotifyPlayer);
   </head>
   <body>
     <div id="app">
-      <spotify-player src="http://localhost:8080/" />
+      <spotify-player src="http://localhost:8080/" layout="cover"></spotify-player>
     </div>
     <script type="module" src="/demo.ts"></script>
   </body>

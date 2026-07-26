@@ -5,20 +5,7 @@ import Progress from "./progress";
 import type { ProgressInterface } from "./progress";
 import SkeletonDetails from "./skeleton-details";
 import SkeletonProgress from "./skeleton-progress";
-
-interface EventResponse extends Event {
-  data: Response,
-}
-
-declare global {
-  interface EventSourceEventMap {
-    ['my-event']: MessageEvent<EventResponse>;
-  }
-  interface Window {
-    progress: HTMLProgressElement | null;
-    time: HTMLSpanElement | null;
-  }
-}
+import styles from "./styles.css?inline";
 
 interface Response {
   track: string,
@@ -35,6 +22,16 @@ interface Response {
   destroy: boolean,
 }
 
+// One CSSStyleSheet shared by every <spotify-player> instance on the page.
+let sheet: CSSStyleSheet | undefined;
+function getSheet(): CSSStyleSheet {
+  if (!sheet) {
+    sheet = new CSSStyleSheet();
+    sheet.replaceSync(styles);
+  }
+  return sheet;
+}
+
 export default class SpotifyPlayer extends HTMLElement {
   #details: Reactive<TrackInterface>;
   #progress: Reactive<ProgressInterface>;
@@ -47,13 +44,17 @@ export default class SpotifyPlayer extends HTMLElement {
   #idleTimeout?: number;
   #idleTimeoutDuration = 30 * 60 * 1000; // 30 minutes
 
-  observedAttributes = ["src"];
+  static observedAttributes = ["src", "layout"];
 
   constructor() {
     super();
 
-    this.#details = new Reactive<TrackInterface>("details", null, Details);
-    this.#progress = new Reactive<ProgressInterface>("progress", null, Progress);
+    const shadow = this.attachShadow({ mode: "open" });
+    shadow.adoptedStyleSheets = [getSheet()];
+
+    // Reactive queries the shadow root (not document) for its mount points.
+    this.#details = new Reactive<TrackInterface>("details", null, Details, shadow);
+    this.#progress = new Reactive<ProgressInterface>("progress", null, Progress, shadow);
 
     this.#renderSkeleton();
   }
@@ -67,6 +68,20 @@ export default class SpotifyPlayer extends HTMLElement {
 
   disconnectedCallback() {
     this.#cleanup();
+  }
+
+  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
+    if (oldValue === newValue) {
+      return;
+    }
+    if (name === "src" && this.isConnected) {
+      this.#hasReceivedData = false;
+      this.#renderSkeleton();
+      this.#subscribe();
+    }
+    if (name === "layout") {
+      this.#applyLayout();
+    }
   }
 
   render(...components: Reactive<any>[]) {
@@ -86,24 +101,37 @@ export default class SpotifyPlayer extends HTMLElement {
     }
   }
 
-  #renderContent(...components: Reactive<any>[]) {
-    const [Details, Progress] = components;
+  // The persistent shadow wrapper. Created once and reused so adoptedStyleSheets
+  // and the layout class survive innerHTML rewrites of its contents.
+  #root(): HTMLElement {
+    let root = this.shadowRoot!.querySelector<HTMLElement>('[part~="root"]');
+    if (!root) {
+      root = document.createElement("div");
+      root.setAttribute("part", "root");
+      root.className = "player";
+      this.shadowRoot!.appendChild(root);
+      this.#applyLayout();
+    }
+    return root;
+  }
 
-    this.innerHTML = `
-      <div class="content-transition">
-        ${Details.create()}
-        ${Progress.create()}
-      </div>
-    `;
+  #applyLayout() {
+    const root = this.shadowRoot?.querySelector<HTMLElement>('[part~="root"]');
+    if (!root) {
+      return;
+    }
+    const cover = this.getAttribute("layout") === "cover";
+    root.classList.toggle("player--cover", cover);
+    root.classList.toggle("player--row", !cover);
+  }
+
+  #renderContent(...components: Reactive<any>[]) {
+    const [details, progress] = components;
+    this.#root().innerHTML = `${details.create()}${progress.create()}`;
   }
 
   #renderSkeleton() {
-    this.innerHTML = `
-      <div class="content-transition">
-        ${SkeletonDetails()}
-        ${SkeletonProgress()}
-      </div>
-    `;
+    this.#root().innerHTML = `${SkeletonDetails()}${SkeletonProgress()}`;
   }
 
   #subscribe() {
@@ -181,13 +209,15 @@ export default class SpotifyPlayer extends HTMLElement {
       }
 
       const percent = Math.min(100, (progress / this.#duration) * 100);
-      if (window.progress) {
-        window.progress.value = percent;
-        window.progress.innerText = `${percent.toFixed(1)}%`;
+      const bar = this.shadowRoot!.getElementById("ssp-progress") as HTMLProgressElement | null;
+      if (bar) {
+        bar.value = percent;
+        bar.textContent = `${percent.toFixed(1)}%`;
       }
 
-      if (window.time) {
-        window.time.innerText = this.#getPrettyTime(progress);
+      const time = this.shadowRoot!.getElementById("ssp-time");
+      if (time) {
+        time.textContent = this.#getPrettyTime(progress);
       }
 
       if (this.#playing && percent < 100) {
@@ -268,4 +298,14 @@ export default class SpotifyPlayer extends HTMLElement {
       this.removeAttribute("src");
     }
   }
+}
+
+// Self-register on import so consumers can `import "@tristimb/spotify-stream-player"`
+// and use <spotify-player> directly. Guarded so a manual customElements.define
+// (or a second import) doesn't throw on re-registration.
+if (
+  typeof customElements !== "undefined" &&
+  !customElements.get("spotify-player")
+) {
+  customElements.define("spotify-player", SpotifyPlayer);
 }

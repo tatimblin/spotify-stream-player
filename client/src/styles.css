@@ -1,0 +1,226 @@
+/* Public styling surface for <spotify-player>.
+ *
+ * This stylesheet is adopted into the element's shadow root (see main.ts,
+ * `styles.css?inline` + adoptedStyleSheets). Consumers never import it — they
+ * style the component from outside via ::part(...) and the --ssp-* custom
+ * properties declared on :host below.
+ *
+ * Design rules (keep the component forgiving of host layouts):
+ *  - Defaults are minimal and reference --ssp-* so any host rule wins.
+ *  - Colors default to the inherited text color (currentColor) so the player
+ *    adopts the host's theme with zero config.
+ *  - The bar and both timestamps are flat siblings inside .progress, and
+ *    .details/.progress are flat siblings inside .player, so a host can rearrange
+ *    them (grid/flex order, justify-self, position) without any structural change.
+ */
+
+:host {
+	display: block;
+	color: inherit;
+	box-sizing: border-box;
+
+	/* ---- Public custom-property API (override any of these from the host) ---- */
+	--ssp-accent: currentColor; /* progress fill */
+	--ssp-album-size: 4em; /* album art size in the row layout */
+	--ssp-gap: 8px;
+	--ssp-radius: 3px;
+	--ssp-title-size: 1em;
+	--ssp-subtitle-size: 0.9em;
+	--ssp-timestamp-size: 0.7em;
+	--ssp-track: color-mix(in oklab, currentColor 15%, transparent);
+	--ssp-skeleton: color-mix(in oklab, currentColor 12%, transparent);
+	--ssp-skeleton-shimmer: color-mix(in oklab, currentColor 22%, transparent);
+}
+
+:host,
+:host * {
+	box-sizing: border-box;
+}
+
+.player {
+	transition: opacity 0.3s ease-in-out;
+}
+
+/* ---- details (album + text) --------------------------------------------- */
+.details {
+	display: flex;
+	gap: var(--ssp-gap);
+	align-items: center;
+	margin-bottom: var(--ssp-gap);
+}
+
+.album {
+	display: block;
+	width: var(--ssp-album-size);
+	height: var(--ssp-album-size);
+	aspect-ratio: 1 / 1;
+	flex: none;
+	overflow: hidden;
+	border-radius: var(--ssp-radius);
+	color: inherit;
+}
+
+.art {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.text {
+	min-width: 0;
+	width: 100%;
+}
+
+.title,
+.artist,
+.album-text {
+	margin: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.title {
+	display: block;
+	font-weight: 600;
+	font-size: var(--ssp-title-size);
+	color: inherit;
+	text-decoration: none;
+}
+
+.artist,
+.album-text {
+	font-size: var(--ssp-subtitle-size);
+	opacity: 0.75;
+}
+
+.artist a,
+.album-text a,
+.title {
+	color: inherit;
+	text-decoration: none;
+}
+
+/* ---- progress (elapsed | bar | remaining) ------------------------------- */
+.progress {
+	display: flex;
+	gap: var(--ssp-gap);
+	align-items: center;
+	justify-content: space-between;
+}
+
+.progress-bar {
+	appearance: none;
+	-webkit-appearance: none;
+	width: 100%;
+	border: none;
+	height: 4px;
+	border-radius: 100px;
+	background: var(--ssp-track);
+	color: var(--ssp-accent); /* Firefox uses color for the fill */
+}
+
+.progress-bar::-webkit-progress-bar {
+	background: var(--ssp-track);
+	border-radius: 100px;
+}
+
+.progress-bar::-webkit-progress-value {
+	background: var(--ssp-accent);
+	border-radius: 100px;
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.progress-bar::-moz-progress-bar {
+	background: var(--ssp-accent);
+	border-radius: 100px;
+}
+
+.timestamp {
+	padding-top: 0.2em;
+	font-size: var(--ssp-timestamp-size);
+	font-variant-numeric: tabular-nums;
+	opacity: 0.75;
+	white-space: nowrap;
+}
+
+/* ---- baked-in art-forward variant (layout="cover") ---------------------- */
+.player--cover .details {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.player--cover .album {
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1 / 1;
+	margin-bottom: var(--ssp-gap);
+}
+
+.player--cover .title,
+.player--cover .artist,
+.player--cover .album-text {
+	white-space: normal;
+}
+
+/* ---- skeleton (theme-aware shimmer) ------------------------------------- */
+.skeleton .album,
+.skeleton .title,
+.skeleton .artist,
+.skeleton .album-text,
+.skeleton .progress-bar,
+.skeleton .timestamp {
+	background: linear-gradient(
+		90deg,
+		var(--ssp-skeleton) 25%,
+		var(--ssp-skeleton-shimmer) 50%,
+		var(--ssp-skeleton) 75%
+	);
+	background-size: 200% 100%;
+	animation: ssp-skeleton 1.5s infinite;
+	border-radius: 4px;
+}
+
+.skeleton .title {
+	height: 1.2em;
+	width: 70%;
+	margin-bottom: 4px;
+}
+
+.skeleton .artist {
+	height: 1em;
+	width: 50%;
+}
+
+.skeleton .timestamp {
+	height: var(--ssp-timestamp-size);
+	width: 2.5em;
+}
+
+/* The skeleton album keeps its own background gradient but still frames the
+   placeholder music-note SVG (which uses currentColor). */
+.skeleton .art {
+	opacity: 0.4;
+}
+
+@keyframes ssp-skeleton {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.skeleton .album,
+	.skeleton .title,
+	.skeleton .artist,
+	.skeleton .album-text,
+	.skeleton .progress-bar,
+	.skeleton .timestamp {
+		animation: none;
+	}
+}

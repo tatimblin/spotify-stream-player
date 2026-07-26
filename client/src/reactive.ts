@@ -1,11 +1,13 @@
 export default class Reactive<T> {
   #data: Partial<T>;
   #name: string;
+  #root: ParentNode;
   #template: (props: Partial<T>, set?: ((data: Partial<T>) => void) | undefined) => string;
   #rendering: boolean = false;
 
-  constructor(name: string, data: T | null, template: (props: Partial<T>, set?: ((data: Partial<T>) => void) | undefined) => string) {
+  constructor(name: string, data: T | null, template: (props: Partial<T>, set?: ((data: Partial<T>) => void) | undefined) => string, root: ParentNode) {
     this.#name = name;
+    this.#root = root;
     if (data === null) {
       this.#data = {};
     } else {
@@ -15,7 +17,7 @@ export default class Reactive<T> {
   }
 
   #getElement(): Element {
-    const element = document.querySelector(`.${this.#name}`);
+    const element = this.#root.querySelector(`.${this.#name}`);
     if (!element) {
       throw Error("element not found");
     }

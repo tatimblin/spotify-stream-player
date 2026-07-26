@@ -1,15 +1,9 @@
-import classes from "./details.module.css";
-
-export interface SkeletonDetailsInterface {
-  // No props needed - static skeleton display
-}
-
 export default function SkeletonDetails(): string {
   return `
-    <div class="${classes.details} ${classes.skeleton}">
-      <div class="${classes.album}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 361 361" style="opacity: 0.4;">
-          <path fill="#FFFFFF" fill-rule="evenodd" d="M254.5,55c-0.87,0.08-8.6,1.45-9.53,1.64l-107,21.59l-0.04,0.01c-2.79,0.59-4.98,1.58-6.67,3
+    <div class="details skeleton" part="details">
+      <div class="album" part="album">
+        <svg class="art" part="art" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 361 361">
+          <path fill="currentColor" fill-rule="evenodd" d="M254.5,55c-0.87,0.08-8.6,1.45-9.53,1.64l-107,21.59l-0.04,0.01c-2.79,0.59-4.98,1.58-6.67,3
             c-2.04,1.71-3.17,4.13-3.6,6.95c-0.09,0.6-0.24,1.82-0.24,3.62c0,0,0,109.32,0,133.92c0,3.13-0.25,6.17-2.37,8.76
             c-2.12,2.59-4.74,3.37-7.81,3.99c-2.33,0.47-4.66,0.94-6.99,1.41c-8.84,1.78-14.59,2.99-19.8,5.01
             c-4.98,1.93-8.71,4.39-11.68,7.51c-5.89,6.17-8.28,14.54-7.46,22.38c0.7,6.69,3.71,13.09,8.88,17.82
@@ -22,9 +16,9 @@ export default function SkeletonDetails(): string {
             C263.54,58.3,260.29,54.5,254.5,55z"/>
         </svg>
       </div>
-      <div class="${classes.details_text}">
-        <div class="${classes.head}">&nbsp;</div>
-        <div class="${classes.rib}">&nbsp;</div>
+      <div class="text">
+        <div class="title" part="title">&nbsp;</div>
+        <div class="artist" part="artist">&nbsp;</div>
       </div>
     </div>
   `;
