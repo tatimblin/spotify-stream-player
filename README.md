@@ -109,8 +109,41 @@ spotify-player::part(artist) { opacity: 0.8; }
 `title`, `artist`, `album-text`, `progress`, `progress-bar`, `elapsed`, `remaining`.
 
 **Custom properties:** `--ssp-accent` (progress fill), `--ssp-album-size`, 
-`--ssp-gap`, `--ssp-radius`, `--ssp-title-size`, `--ssp-subtitle-size`, 
-`--ssp-timestamp-size`, `--ssp-skeleton` (loading state tint), and more.
+`--ssp-gap`, `--ssp-radius`, `--ssp-progress-height` (progress bar thickness, 
+default `4px`), `--ssp-title-size`, `--ssp-subtitle-size`, `--ssp-timestamp-size`, 
+`--ssp-skeleton` (loading state tint), and more.
+
+`--ssp-cover-color` is set automatically by the component: it samples the
+current album art and exposes its dominant color as an `rgb(...)` value on the
+host, updating on every track change. It falls back to a neutral color when the
+cover cannot be read (e.g. the image CDN doesn't send CORS headers, so the
+canvas is cross-origin-tainted). Read it in your own styles via
+`var(--ssp-cover-color, <fallback>)`.
+
+##### Album-tinted background
+
+Add the boolean `tint` attribute to opt into a background derived from the
+current album art (via `--ssp-cover-color`). The gradient is deliberately dark
+and muted regardless of the album's own lightness/hue, so the light foreground
+text always stays legible; without `tint` the default layouts are unaffected.
+
+```html
+<spotify-player src="http://localhost:8080/" layout="cover" tint></spotify-player>
+```
+
+##### Events
+
+The component dispatches a `coverchange` `CustomEvent` whenever it extracts a
+new dominant color from the album art. `event.detail` is `{ color }`, where
+`color` is the same `rgb(...)` string set on `--ssp-cover-color`. It does not
+fire when the cover cannot be read (cross-origin-tainted canvas).
+
+```js
+const player = document.querySelector("spotify-player");
+player.addEventListener("coverchange", (e) => {
+  console.log(e.detail.color); // e.g. "rgb(120 84 60)"
+});
+```
 
 ##### Layout
 

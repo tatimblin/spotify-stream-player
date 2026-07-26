@@ -24,6 +24,7 @@
 	--ssp-album-size: 4em; /* album art size in the row layout */
 	--ssp-gap: 8px;
 	--ssp-radius: 3px;
+	--ssp-progress-height: 4px;
 	--ssp-title-size: 1em;
 	--ssp-subtitle-size: 0.9em;
 	--ssp-timestamp-size: 0.7em;
@@ -113,9 +114,11 @@
 .progress-bar {
 	appearance: none;
 	-webkit-appearance: none;
-	width: 100%;
+	flex: 1; /* fill the space between the elapsed / remaining timestamps */
+	min-width: 0;
+	width: auto;
 	border: none;
-	height: 4px;
+	height: var(--ssp-progress-height);
 	border-radius: 100px;
 	background: var(--ssp-track);
 	color: var(--ssp-accent); /* Firefox uses color for the fill */
@@ -147,22 +150,94 @@
 }
 
 /* ---- baked-in art-forward variant (layout="cover") ---------------------- */
-.player--cover .details {
+/* Height-adaptive: the player is a column that fills its host; the album absorbs
+   the leftover space above the (auto-height) progress row, and the art is the
+   largest centered square that fits the album box. This works both when the host
+   has a definite height (e.g. a fixed-size card — art shrinks to fit, no overflow)
+   and when it doesn't (art falls back to its intrinsic square). The .details and
+   .progress class selectors also match the internal Reactive mount wrappers, so
+   the flex chain propagates all the way down. */
+.player--cover {
+	display: flex;
 	flex-direction: column;
-	align-items: stretch;
+	height: 100%;
+	min-height: 0;
 }
 
+/* Both the mount wrapper and the parted details grow and stack as a column. */
+.player--cover .details {
+	flex: 1 1 auto;
+	min-height: 0;
+	flex-direction: column;
+	align-items: stretch;
+	margin-bottom: 0;
+}
+
+/* A single gap between the details block and the progress row. */
+.player--cover > .details {
+	margin-bottom: var(--ssp-gap);
+}
+
+/* Album frame fills the leftover height and centers the (square) art. */
 .player--cover .album {
+	flex: 1 1 auto;
+	min-height: 0;
 	width: 100%;
 	height: auto;
-	aspect-ratio: 1 / 1;
+	aspect-ratio: auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
 	margin-bottom: var(--ssp-gap);
+}
+
+/* Largest square that fits the frame: fill the frame's height, derive width from
+   the 1:1 ratio, and cap at 100% width so a tall/narrow frame doesn't overflow
+   horizontally. object-fit:cover crops the image into the square. Because the
+   album frame flexes to the leftover height, the art scales with it. */
+.player--cover .art {
+	height: 100%;
+	width: auto;
+	max-width: 100%;
+	aspect-ratio: 1 / 1;
+	object-fit: cover;
+}
+
+/* Text keeps its natural height (doesn't compete with the album for leftover). */
+.player--cover .text {
+	flex: none;
+}
+
+/* The progress row (and its mount wrapper) span the full width so the bar can
+   fill the space between the timestamps. In a stretch column the wrapper is
+   already full width; force the inner parted .progress to match it. */
+.player--cover .progress {
+	width: 100%;
+	align-self: stretch;
 }
 
 .player--cover .title,
 .player--cover .artist,
 .player--cover .album-text {
 	white-space: normal;
+}
+
+/* ---- opt-in album-tinted background (attribute: tint) ------------------- */
+/* Derives a reliably DARK, muted gradient from the extracted cover color so
+   light text always reads regardless of the album's own lightness/hue: the
+   clamp() floors/caps the top-stop lightness and the low second stop keeps the
+   bottom dark. Falls back to a neutral color when --ssp-cover-color is unset
+   (e.g. a cross-origin-tainted cover). Placed after the base/cover rules so it
+   wins for the tinted case. */
+:host([tint]) [part~="root"] {
+	--_c: var(--ssp-cover-color, oklch(0.45 0.03 265));
+	background: linear-gradient(
+		to bottom,
+		oklch(from var(--_c) clamp(0.30, l, 0.42) calc(c * 0.7) h),
+		oklch(from var(--_c) 0.16 calc(c * 0.55) h)
+	);
+	color: oklch(0.97 0 0);
 }
 
 /* ---- skeleton (theme-aware shimmer) ------------------------------------- */

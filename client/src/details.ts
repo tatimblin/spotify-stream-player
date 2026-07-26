@@ -12,7 +12,7 @@ export default function (props: Partial<TrackInterface>) {
   return `
     <div class="details" part="details">
       ${props.cover ? `<a class="album" part="album" href="${props.albumUrl ?? "#"}">
-        <img class="art" part="art" src="${props.cover}" alt="${props.album ?? ""}"/>
+        <img class="art" part="art" crossorigin="anonymous" src="${props.cover}" alt="${props.album ?? ""}"/>
       </a>` : ""}
       <div class="text">
         <a class="title" part="title" href="${props.url ?? "#"}">${props.track ?? ""}</a>

@@ -95,6 +95,9 @@ export default class SpotifyPlayer extends HTMLElement {
             console.warn('Component render failed:', error);
           }
         });
+        // The details component re-creates the <img> on every track change, so
+        // re-run extraction against the freshly-rendered image each time.
+        this.#extractCoverColor();
       });
     } else {
       this.#renderSkeleton();
@@ -132,6 +135,91 @@ export default class SpotifyPlayer extends HTMLElement {
 
   #renderSkeleton() {
     this.#root().innerHTML = `${SkeletonDetails()}${SkeletonProgress()}`;
+  }
+
+  // Sample the current cover art and expose its average color as the
+  // --ssp-cover-color custom property + a `coverchange` event. Fully defensive:
+  // a cross-origin-tainted canvas throws on read, in which case we leave the
+  // property unset so CSS `var(--ssp-cover-color, <fallback>)` keeps working.
+  #extractCoverColor() {
+    const img = this.shadowRoot?.querySelector<HTMLImageElement>('img.art');
+    if (!img) {
+      return;
+    }
+
+    if (img.complete && img.naturalWidth > 0) {
+      this.#sampleCoverColor(img);
+      return;
+    }
+
+    // Not ready yet — sample once the image loads. Guard against hooking the
+    // same node twice (renders can re-invoke before load fires).
+    if (img.dataset.sspHooked === "1") {
+      return;
+    }
+    img.dataset.sspHooked = "1";
+    img.addEventListener(
+      "load",
+      () => this.#sampleCoverColor(img),
+      { once: true }
+    );
+  }
+
+  #sampleCoverColor(img: HTMLImageElement) {
+    try {
+      if (!img.naturalWidth || !img.naturalHeight) {
+        return;
+      }
+
+      const size = 16;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return; // canvas 2d unsupported — leave the property unset
+      }
+
+      ctx.drawImage(img, 0, 0, size, size);
+
+      // Reading pixels from a canvas tainted by a cross-origin image throws a
+      // SecurityError; any failure here means we simply don't set the color.
+      const { data } = ctx.getImageData(0, 0, size, size);
+
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let count = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3];
+        if (alpha < 128) {
+          continue; // skip near-transparent pixels
+        }
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count++;
+      }
+
+      if (count === 0) {
+        return;
+      }
+
+      r = Math.round(r / count);
+      g = Math.round(g / count);
+      b = Math.round(b / count);
+
+      const color = `rgb(${r} ${g} ${b})`;
+      this.style.setProperty("--ssp-cover-color", color);
+      this.dispatchEvent(
+        new CustomEvent("coverchange", { detail: { color } })
+      );
+    } catch {
+      // Tainted canvas or any other read failure — leave things unset.
+      return;
+    }
   }
 
   #subscribe() {
