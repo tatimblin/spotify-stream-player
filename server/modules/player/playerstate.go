@@ -13,6 +13,7 @@ type PlayerState struct {
 	Album     string    `json:"album"`
 	AlbumURL  string    `json:"albumUrl"`
 	Cover     string    `json:"cover"`
+	Covers    []Cover   `json:"covers"`
 	Artists   string    `json:"artists"`
 	ArtistURL string    `json:"artistUrl"`
 	Progress  int       `json:"progress"`
@@ -21,6 +22,13 @@ type PlayerState struct {
 	Playing   bool      `json:"playing"`
 	Epoch     time.Time `json:"time"`
 	Destroy   bool      `json:"destroy"`
+}
+
+// Cover is one album-art image at a specific pixel width, for building an
+// <img srcset> on the client so the browser fetches the right size.
+type Cover struct {
+	URL   string `json:"url"`
+	Width int    `json:"width"`
 }
 
 type PlayerStateInterface interface {
@@ -63,19 +71,29 @@ func (state *PlayerState) setTrackName(name string) error {
 
 func (state *PlayerState) setAlbum(album spotify.SimpleAlbum) error {
 	state.Album = album.Name
-	if albumCover, err := getAlbumCover(album); err == nil {
-		state.Cover = albumCover
+
+	covers := getAlbumCovers(album)
+	state.Covers = covers
+	// Backward-compatible single cover: use the LARGEST image so older clients
+	// (and the srcset fallback) render crisply at any size. Spotify orders
+	// Images largest-first.
+	if len(covers) > 0 {
+		state.Cover = covers[0].URL
 	}
 	return nil
 }
 
-func getAlbumCover(album spotify.SimpleAlbum) (string, error) {
-	if len(album.Images) == 0 {
-		return "", fmt.Errorf("no image for song")
+// getAlbumCovers returns every album-art size Spotify provides (largest first),
+// each with its pixel width, for building an <img srcset> on the client.
+func getAlbumCovers(album spotify.SimpleAlbum) []Cover {
+	covers := make([]Cover, 0, len(album.Images))
+	for _, img := range album.Images {
+		if img.URL == "" {
+			continue
+		}
+		covers = append(covers, Cover{URL: img.URL, Width: img.Width})
 	}
-
-	lastImageIndex := len(album.Images) - 1
-	return album.Images[lastImageIndex].URL, nil
+	return covers
 }
 
 func (state *PlayerState) setArtists(artists []spotify.SimpleArtist) error {
