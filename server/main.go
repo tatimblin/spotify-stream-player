@@ -19,9 +19,11 @@ import (
 func main() {
 	log.Print("starting server...")
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s", err)
+	// Load .env for local development. In production (e.g. Cloud Run) there is no
+	// .env file — env vars are injected by the platform — so a missing file is
+	// not fatal; we fall back to the real environment.
+	if err := godotenv.Load(".env"); err != nil {
+		log.Printf("no .env file loaded (%s); using environment variables", err)
 	}
 
 	ORIGINS := os.Getenv("ORIGINS")
