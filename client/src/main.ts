@@ -294,6 +294,14 @@ export default class SpotifyPlayer extends HTMLElement {
         covers: data.covers,
       });
 
+      // #details.set re-renders the <img> on every track change (not just the
+      // first), so re-extract the tint color + re-fit the srcset target against
+      // the new image each time. Deferred a frame so the new <img> is in the DOM.
+      requestAnimationFrame(() => {
+        this.#extractCoverColor();
+        this.#updateArtSizes();
+      });
+
       this.#progress.set({
         progress: data.progress,
         duration: data.duration,
