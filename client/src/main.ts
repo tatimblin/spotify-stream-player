@@ -1,6 +1,6 @@
 import Reactive from "./reactive";
 import Details from "./details";
-import type { TrackInterface } from "./details";
+import type { TrackInterface, Cover } from "./details";
 import Progress from "./progress";
 import type { ProgressInterface } from "./progress";
 import SkeletonDetails from "./skeleton-details";
@@ -13,6 +13,7 @@ interface Response {
   album: string,
   albumUrl: string,
   cover?: string,
+  covers?: Cover[],
   artists: string,
   artistUrl: string,
   progress: number,
@@ -43,6 +44,7 @@ export default class SpotifyPlayer extends HTMLElement {
   #eventSource?: EventSource;
   #idleTimeout?: number;
   #idleTimeoutDuration = 30 * 60 * 1000; // 30 minutes
+  #resizeObserver?: ResizeObserver;
 
   static observedAttributes = ["src", "layout"];
 
@@ -64,9 +66,18 @@ export default class SpotifyPlayer extends HTMLElement {
     this.#subscribe();
     this.#setupVisibilityHandling();
     this.#startIdleTimer();
+
+    // Keep the art's `sizes` in sync with its rendered width so the browser
+    // re-picks the best srcset candidate when the layout changes.
+    if (typeof ResizeObserver !== "undefined" && !this.#resizeObserver) {
+      this.#resizeObserver = new ResizeObserver(() => this.#updateArtSizes());
+      this.#resizeObserver.observe(this);
+    }
   }
 
   disconnectedCallback() {
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = undefined;
     this.#cleanup();
   }
 
@@ -96,8 +107,9 @@ export default class SpotifyPlayer extends HTMLElement {
           }
         });
         // The details component re-creates the <img> on every track change, so
-        // re-run extraction against the freshly-rendered image each time.
+        // re-run extraction + resize the srcset target against the fresh image.
         this.#extractCoverColor();
+        this.#updateArtSizes();
       });
     } else {
       this.#renderSkeleton();
@@ -222,6 +234,20 @@ export default class SpotifyPlayer extends HTMLElement {
     }
   }
 
+  // Set the art <img>'s `sizes` to its actual rendered CSS width so the browser
+  // resolves the srcset to the smallest candidate that still covers the display
+  // size at the current device-pixel-ratio. No-op when there's no srcset.
+  #updateArtSizes() {
+    const img = this.shadowRoot?.querySelector<HTMLImageElement>('img.art');
+    if (!img || !img.hasAttribute("srcset")) {
+      return;
+    }
+    const width = Math.round(img.getBoundingClientRect().width);
+    if (width > 0) {
+      img.setAttribute("sizes", `${width}px`);
+    }
+  }
+
   #subscribe() {
     if (!this.src) {
       return;
@@ -265,6 +291,7 @@ export default class SpotifyPlayer extends HTMLElement {
         artists: data.artists,
         artistUrl: data.artistUrl,
         cover: data.cover,
+        covers: data.covers,
       });
 
       this.#progress.set({
