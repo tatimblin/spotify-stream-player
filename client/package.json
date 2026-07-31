@@ -34,7 +34,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "postversion": "git add package.json && git commit -m $npm_package_version && git tag $npm_package_version HEAD && git push --tags"
+    "postversion": "git add package.json && git commit -m $npm_package_version && git tag $npm_package_version HEAD && git push && git push --tags"
   },
   "devDependencies": {
     "typescript": "^5.2.2",
