@@ -31,6 +31,7 @@
 	--ssp-track: color-mix(in oklab, currentColor 15%, transparent);
 	--ssp-skeleton: color-mix(in oklab, currentColor 12%, transparent);
 	--ssp-skeleton-shimmer: color-mix(in oklab, currentColor 22%, transparent);
+	--ssp-marquee-gap: 2em; /* space between the two looping copies */
 }
 
 :host,
@@ -101,6 +102,43 @@
 .title {
 	color: inherit;
 	text-decoration: none;
+}
+
+/* ---- car-radio marquee (applied by JS when a single-line row overflows) --- */
+/* #setupMarquee() adds .is-marquee and wraps the row's content in a
+   .marquee-track only when the host has constrained the row to one line and the
+   text is too wide to fit. The row keeps overflow:hidden (the clipping window);
+   we only swap the ellipsis for a continuously looping scroll. */
+.is-marquee {
+	text-overflow: clip;
+	white-space: nowrap;
+}
+
+.marquee-track {
+	display: inline-flex;
+	flex-wrap: nowrap;
+	gap: var(--ssp-marquee-gap, 2em);
+	white-space: nowrap;
+	will-change: transform;
+	animation: ssp-marquee var(--ssp-marquee-duration, 8s) linear infinite;
+}
+
+.marquee-copy {
+	flex: none;
+	white-space: nowrap;
+}
+
+/* Translate by exactly one copy + gap so the trailing clone lands where the
+   first copy started — a seamless, jump-free loop. A brief hold at the start
+   (0 → 8%) gives the reader a beat before it scrolls, like a real car radio. */
+@keyframes ssp-marquee {
+	0%,
+	8% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(calc(-1 * var(--ssp-marquee-shift, 0px)));
+	}
 }
 
 /* ---- progress (elapsed | bar | remaining) ------------------------------- */
@@ -299,6 +337,12 @@
 	.skeleton .album-text,
 	.skeleton .progress-bar,
 	.skeleton .timestamp {
+		animation: none;
+	}
+
+	/* #setupMarquee() already skips scrolling under reduced motion, but if the
+	   preference flips while a marquee is mounted, freeze it defensively. */
+	.marquee-track {
 		animation: none;
 	}
 }
