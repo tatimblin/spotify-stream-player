@@ -394,9 +394,16 @@ export default class SpotifyPlayer extends HTMLElement {
         isPlaying: data.playing,
       });
 
+      // Anchor progress to WHEN the server measured it (data.time, Spotify's
+      // timestamp), not when this client received it. The broker replays its
+      // cached last-event to every new connection, so a page reload mid-song
+      // gets a `progress` that was captured when the song started — using the
+      // receipt time would restart the bar near 0. Deriving #start from the
+      // server epoch means `now - #start` yields the real elapsed time.
+      // Falls back to receipt-time anchoring if the timestamp is unparseable.
       const now = new Date().getTime();
-
-      this.#start = now - data.progress;
+      const measuredAt = data.time ? new Date(data.time).getTime() : NaN;
+      this.#start = Number.isNaN(measuredAt) ? now - data.progress : measuredAt - data.progress;
       this.#playing = data.playing;
       this.#duration = data.duration;
 
