@@ -45,6 +45,9 @@ export default class SpotifyPlayer extends HTMLElement {
   #idleTimeout?: number;
   #idleTimeoutDuration = 30 * 60 * 1000; // 30 minutes
   #resizeObserver?: ResizeObserver;
+  // Pristine innerHTML of each marquee-eligible line, captured before we wrap it
+  // in a scrolling track so #setupMarquee() can restore it and stay idempotent.
+  #marqueeOriginals = new WeakMap<HTMLElement, string>();
 
   static observedAttributes = ["src", "layout"];
 
@@ -70,7 +73,13 @@ export default class SpotifyPlayer extends HTMLElement {
     // Keep the art's `sizes` in sync with its rendered width so the browser
     // re-picks the best srcset candidate when the layout changes.
     if (typeof ResizeObserver !== "undefined" && !this.#resizeObserver) {
-      this.#resizeObserver = new ResizeObserver(() => this.#updateArtSizes());
+      this.#resizeObserver = new ResizeObserver(() => {
+        this.#updateArtSizes();
+        // Overflow depends on the rendered width, so re-evaluate the marquee
+        // whenever the element resizes (a line that now fits should stop
+        // scrolling; one that no longer fits should start).
+        this.#setupMarquee();
+      });
       this.#resizeObserver.observe(this);
     }
   }
@@ -110,6 +119,7 @@ export default class SpotifyPlayer extends HTMLElement {
         // re-run extraction + resize the srcset target against the fresh image.
         this.#extractCoverColor();
         this.#updateArtSizes();
+        this.#setupMarquee();
       });
     } else {
       this.#renderSkeleton();
@@ -248,6 +258,81 @@ export default class SpotifyPlayer extends HTMLElement {
     }
   }
 
+  // Car-radio marquee: for each single-line text row that overflows its box,
+  // duplicate its content into a scrolling track that loops continuously; leave
+  // rows that fit (or that the host lets wrap) untouched. Purely overflow-driven
+  // — the component never forces single-line. Fully idempotent: every call first
+  // restores each row to its pristine markup, then re-measures, so it's safe to
+  // run on every render, track change, and resize.
+  #setupMarquee() {
+    const root = this.shadowRoot;
+    if (!root) {
+      return;
+    }
+
+    const reduceMotion =
+      typeof matchMedia !== "undefined" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const rows = root.querySelectorAll<HTMLElement>(".title, .artist");
+    rows.forEach((el) => {
+      // Restore any prior marquee wrapping so measurement sees the real text.
+      const original = this.#marqueeOriginals.get(el);
+      if (original !== undefined) {
+        el.innerHTML = original;
+        el.classList.remove("is-marquee");
+        el.style.removeProperty("--ssp-marquee-shift");
+        el.style.removeProperty("--ssp-marquee-duration");
+        this.#marqueeOriginals.delete(el);
+      }
+
+      if (reduceMotion) {
+        return; // static ellipsis (host styling) — no scrolling
+      }
+
+      // Only overflows when the host has constrained the row to a single line.
+      const overflow = el.scrollWidth - el.clientWidth;
+      if (overflow <= 1) {
+        return;
+      }
+
+      // Wrap the existing content in a track and append an aria-hidden clone so
+      // the loop is seamless. The gap between copies is read from CSS so hosts
+      // can tune it via --ssp-marquee-gap.
+      const content = el.innerHTML;
+      this.#marqueeOriginals.set(el, content);
+
+      const gapPx = this.#marqueeGapPx(el);
+      const copyWidth = el.scrollWidth; // one copy's laid-out width
+      const shift = copyWidth + gapPx;  // distance to travel for a seamless wrap
+
+      el.classList.add("is-marquee");
+      el.innerHTML =
+        `<span class="marquee-track">` +
+        `<span class="marquee-copy">${content}</span>` +
+        `<span class="marquee-copy" aria-hidden="true">${content}</span>` +
+        `</span>`;
+
+      // Constant scroll speed: duration scales with distance travelled.
+      const PX_PER_SEC = 40;
+      const duration = Math.min(30, Math.max(4, shift / PX_PER_SEC));
+      el.style.setProperty("--ssp-marquee-shift", `${shift}px`);
+      el.style.setProperty("--ssp-marquee-duration", `${duration}s`);
+    });
+  }
+
+  // Resolve the computed --ssp-marquee-gap for a row to pixels (falls back to a
+  // 2em-equivalent when unset or non-px). Used to size the loop's wrap distance.
+  #marqueeGapPx(el: HTMLElement): number {
+    const raw = getComputedStyle(el).getPropertyValue("--ssp-marquee-gap").trim();
+    const px = parseFloat(raw);
+    if (raw.endsWith("px") && !Number.isNaN(px)) {
+      return px;
+    }
+    const fontSize = parseFloat(getComputedStyle(el).fontSize) || 16;
+    return fontSize * 2;
+  }
+
   #subscribe() {
     if (!this.src) {
       return;
@@ -300,6 +385,7 @@ export default class SpotifyPlayer extends HTMLElement {
       requestAnimationFrame(() => {
         this.#extractCoverColor();
         this.#updateArtSizes();
+        this.#setupMarquee();
       });
 
       this.#progress.set({
