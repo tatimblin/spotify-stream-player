@@ -1,0 +1,8 @@
+# Cloud Build upload exclusions.
+#
+# gcloud looks for a .gitignore next to the --source dir to inherit, and there
+# isn't one here — the repo's is at the root. Without this file, .env (live
+# Spotify credentials) would be uploaded and baked into the container image.
+# Cloud Run injects all of these as env vars, so nothing here needs .env.
+.env
+.DS_Store

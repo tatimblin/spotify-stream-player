@@ -34,14 +34,9 @@ func main() {
 		}
 	}
 
-	onDestroyMsg, err := json.Marshal(player.PlayerState{Destroy: true})
-	if err != nil {
-		log.Fatalf("Error creating onDestroy event")
-	}
-
 	var (
 		state       = player.PlayerState{}
-		broker      = broker.NewBroker(allowedOrigins, onDestroyMsg)
+		broker      = broker.NewBroker(allowedOrigins)
 		player      = player.NewPlayer()
 		pollingRate = time.Second * 5
 	)
