@@ -38,10 +38,18 @@ export default class SpotifyPlayer extends HTMLElement {
   #progress: Reactive<ProgressInterface>;
   #hasReceivedData: boolean = false;
   #playing: boolean = false;
+  // What the `playing` attribute and `playstatechange` last announced: null until
+  // the first message says which state the track is in.
+  #announced: boolean | null = null;
   #start = 0;
   #duration = 0;
-  #animationID?: number;
+  #tickID?: number;
+  // Last values written by the clock, so a tick that changes nothing writes nothing.
+  #lastTime = "";
+  #lastValue = -1;
+  #lastPercent = "";
   #eventSource?: EventSource;
+  #onVisibilityChange?: () => void;
   #idleTimeout?: number;
   #idleTimeoutDuration = 30 * 60 * 1000; // 30 minutes
   #resizeObserver?: ResizeObserver;
@@ -49,7 +57,12 @@ export default class SpotifyPlayer extends HTMLElement {
   // in a scrolling track so #setupMarquee() can restore it and stay idempotent.
   #marqueeOriginals = new WeakMap<HTMLElement, string>();
 
-  static observedAttributes = ["src", "layout"];
+  static observedAttributes = ["src", "layout", "paused"];
+
+  // The clock's rate. The elapsed text only changes once a second and the bar
+  // moves a fraction of a pixel per second, so 4Hz is visually continuous while
+  // costing a fifteenth of a per-frame loop.
+  static readonly TICK_MS = 250;
 
   constructor() {
     super();
@@ -87,6 +100,13 @@ export default class SpotifyPlayer extends HTMLElement {
   disconnectedCallback() {
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = undefined;
+    // Without this the listener outlives the element: a detached player would
+    // resubscribe (and run its clock) on the next visibility change, and every
+    // re-insertion would add another listener.
+    if (this.#onVisibilityChange) {
+      document.removeEventListener("visibilitychange", this.#onVisibilityChange);
+      this.#onVisibilityChange = undefined;
+    }
     this.#cleanup();
   }
 
@@ -102,6 +122,34 @@ export default class SpotifyPlayer extends HTMLElement {
     if (name === "layout") {
       this.#applyLayout();
     }
+    if (name === "paused") {
+      // Paused: the clock stops (the stream stays open, so the state is current
+      // on resume). Resumed: catch the clock up at once, then carry on.
+      this.#clearTimer();
+      if (!this.paused) {
+        this.#startClock();
+      }
+    }
+  }
+
+  /**
+   * `paused` stops the progress clock without closing the stream — for a host
+   * that knows the player is off screen. Reflects the `paused` attribute.
+   */
+  get paused(): boolean {
+    return this.hasAttribute("paused");
+  }
+
+  set paused(value: boolean) {
+    this.toggleAttribute("paused", Boolean(value));
+  }
+
+  /**
+   * Whether a track is playing: null until the first message arrives. Reflected
+   * as the `playing` attribute; each change fires `playstatechange`.
+   */
+  get playing(): boolean | null {
+    return this.#announced;
   }
 
   render(...components: Reactive<any>[]) {
@@ -404,56 +452,104 @@ export default class SpotifyPlayer extends HTMLElement {
       const now = new Date().getTime();
       const measuredAt = data.time ? new Date(data.time).getTime() : NaN;
       this.#start = Number.isNaN(measuredAt) ? now - data.progress : measuredAt - data.progress;
-      this.#playing = data.playing;
+      this.#playing = Boolean(data.playing && !data.destroy);
       this.#duration = data.duration;
 
+      // The progress template just re-rendered the bar and the elapsed text, so
+      // the clock's change-detection starts over.
+      this.#lastTime = "";
+      this.#lastValue = -1;
+      this.#lastPercent = "";
+
       this.#clearTimer();
-      if (this.#playing && !data.destroy) {
-        this.#animationID = window.requestAnimationFrame(this.#timer);
-      }
+      this.#announce(this.#playing && this.#elapsed() <= this.#duration);
+      this.#startClock();
     }
   }
 
-  get #timer() {
-    return () => {
-      const now = new Date().getTime();
-      const progress = Math.max(0, now - this.#start);
+  #elapsed(): number {
+    return Math.max(0, new Date().getTime() - this.#start);
+  }
 
-      if (progress > this.#duration) {
-        this.#clearTimer();
-        return;
+  // Start the clock if there is something for it to do: a playing track, on a
+  // player nobody has paused.
+  #startClock() {
+    if (this.#playing && !this.paused && this.#tickID === undefined) {
+      this.#tick();
+    }
+  }
+
+  // One clock step: write the bar and the elapsed time if they changed, then
+  // schedule the next step for the sooner of TICK_MS or the next whole second,
+  // so the seconds still turn over on time.
+  #tick = () => {
+    this.#tickID = undefined;
+    const progress = this.#elapsed();
+
+    if (progress > this.#duration) {
+      this.#announce(false);
+      return;
+    }
+
+    const percent = Math.min(100, (progress / this.#duration) * 100);
+    const bar = this.shadowRoot!.getElementById("ssp-progress") as HTMLProgressElement | null;
+    if (bar) {
+      const value = Math.round(percent * 100) / 100;
+      if (value !== this.#lastValue) {
+        bar.value = value;
+        this.#lastValue = value;
       }
-
-      const percent = Math.min(100, (progress / this.#duration) * 100);
-      const bar = this.shadowRoot!.getElementById("ssp-progress") as HTMLProgressElement | null;
-      if (bar) {
-        bar.value = percent;
-        bar.textContent = `${percent.toFixed(1)}%`;
-      }
-
-      const time = this.shadowRoot!.getElementById("ssp-time");
-      if (time) {
-        time.textContent = this.#getPrettyTime(progress);
-      }
-
-      if (this.#playing && percent < 100) {
-        this.#animationID = window.requestAnimationFrame(this.#timer);
+      // The fallback text, in the same whole percent the template renders.
+      const fallback = `${Math.floor(percent)}%`;
+      if (fallback !== this.#lastPercent) {
+        bar.textContent = fallback;
+        this.#lastPercent = fallback;
       }
     }
+
+    const time = this.shadowRoot!.getElementById("ssp-time");
+    if (time) {
+      const text = this.#getPrettyTime(progress);
+      if (text !== this.#lastTime) {
+        time.textContent = text;
+        this.#lastTime = text;
+      }
+    }
+
+    if (this.#playing && !this.paused && percent < 100) {
+      const toNextSecond = 1000 - (progress % 1000) + 1;
+      this.#tickID = window.setTimeout(this.#tick, Math.min(SpotifyPlayer.TICK_MS, toNextSecond));
+    }
+  };
+
+  // Reflect the play state as the `playing` attribute and fire
+  // `playstatechange` when it changes, so a host need not watch the clock.
+  #announce(playing: boolean | null) {
+    if (playing === this.#announced) {
+      return;
+    }
+    this.#announced = playing;
+    this.toggleAttribute("playing", playing === true);
+    this.dispatchEvent(
+      new CustomEvent("playstatechange", { detail: { playing } })
+    );
   }
 
   #setupVisibilityHandling() {
-    const handleVisibilityChange = () => {
+    if (this.#onVisibilityChange) {
+      return; // already listening (connectedCallback runs on every re-insertion)
+    }
+    this.#onVisibilityChange = () => {
       if (document.hidden) {
         this.#cleanup();
-      } else {
+      } else if (this.isConnected) {
         this.#hasReceivedData = false;
         this.#renderSkeleton();
         this.#subscribe();
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', this.#onVisibilityChange);
   }
 
   #startIdleTimer() {
@@ -481,14 +577,19 @@ export default class SpotifyPlayer extends HTMLElement {
     }
 
     this.#hasReceivedData = false;
+    this.#playing = false;
     this.#clearTimer();
     this.#renderSkeleton();
+    // Back to the skeleton: nothing is known to be playing any more.
+    if (this.#announced) {
+      this.#announce(false);
+    }
   }
 
   #clearTimer() {
-    if (this.#animationID) {
-      window.cancelAnimationFrame(this.#animationID);
-      this.#animationID = undefined;
+    if (this.#tickID !== undefined) {
+      window.clearTimeout(this.#tickID);
+      this.#tickID = undefined;
     }
   }
 

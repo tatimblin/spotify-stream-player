@@ -145,6 +145,30 @@ player.addEventListener("coverchange", (e) => {
 });
 ```
 
+While a track plays, the host carries the boolean `playing` attribute (also the
+`playing` property: `true`, `false`, or `null` before the first message), and
+each change fires `playstatechange` with `event.detail` `{ playing }`. It turns
+off when the track is paused, ends, or the stream closes (tab hidden, idle).
+
+```js
+player.addEventListener("playstatechange", (e) => {
+  console.log(e.detail.playing ? "live" : "paused");
+});
+```
+
+##### Pausing the clock
+
+The progress clock runs at 4Hz and writes only what changed. Set the boolean
+`paused` attribute (or `player.paused = true`) to stop it while the player is
+off screen; the stream stays open, and removing the attribute catches the clock
+up at once. The clock also stops on its own while the tab is hidden.
+
+```js
+new IntersectionObserver(([entry]) => {
+  player.paused = !entry.isIntersecting;
+}).observe(player);
+```
+
 ##### Layout
 
 The `layout` attribute selects a built-in arrangement:
